@@ -46,6 +46,7 @@
  */
 
 import { prisma } from '@/lib/prisma';
+import { BRAND } from '@/lib/brand';
 import { fetchLeadKtpFromS3 } from '@/lib/lead-ktp-storage';
 import {
   getOcrKtpData,
@@ -230,7 +231,7 @@ function buildAddLeadAssetBody(
   return {
     SerialNo1: null,
     SerialNo2: null,
-    AssetLv1Code: 'HYUNDAI',
+    AssetLv1Code: BRAND.hierarchyLv1Code,
     AssetLv2Code: asset.modelCode,
     AssetLv2Name: asset.modelName.slice(0, 100),
     AssetLv3Code: asset.fscCode,

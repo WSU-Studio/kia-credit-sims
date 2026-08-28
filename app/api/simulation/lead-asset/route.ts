@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { BRAND } from '@/lib/brand';
 import { auth } from '@/lib/auth-server';
 import { isDealerPortalUser } from '@/lib/dealer-portal';
 import {
@@ -198,7 +199,7 @@ export async function POST(request: NextRequest) {
     requestBody = {
       SerialNo1: null,
       SerialNo2: null,
-      AssetLv1Code: 'HYUNDAI',
+      AssetLv1Code: BRAND.hierarchyLv1Code,
       AssetLv2Code: resolvedAsset.modelCode,
       AssetLv2Name: resolvedAsset.modelName.slice(0, 100),
       AssetLv3Code: resolvedAsset.fscCode,
