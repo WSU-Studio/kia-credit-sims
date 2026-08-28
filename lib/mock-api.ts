@@ -12,35 +12,35 @@ import type {
   DefaultProduct,
 } from '@/app/types/credit-simulation';
 
-// Mock Data - Vendors/Dealers
+// Mock Data - Vendors/Dealers (KIA). Codes are placeholders until Confins catalog is confirmed.
 const MOCK_VENDORS: Vendor[] = [
   {
-    VendorCode: 'A11AD12406',
-    VendorName: 'HYUNDAI TANGERANG CITY',
+    VendorCode: 'K11AD12406',
+    VendorName: 'KIA TANGERANG CITY',
     ZipCode: '15118',
     City: 'TANGERANG',
     OriOfficeCode: '11',
     OriOfficeName: 'DKI JAKARTA',
   },
   {
-    VendorCode: 'A11AD12404',
-    VendorName: 'HYUNDAI JAKARTA SELATAN',
+    VendorCode: 'K11AD12404',
+    VendorName: 'KIA JAKARTA SELATAN',
     ZipCode: '12120',
     City: 'JAKARTA SELATAN',
     OriOfficeCode: '11',
     OriOfficeName: 'DKI JAKARTA',
   },
   {
-    VendorCode: 'A12AD60505',
-    VendorName: 'HYUNDAI BANDUNG',
+    VendorCode: 'K12AD60505',
+    VendorName: 'KIA BANDUNG',
     ZipCode: '40111',
     City: 'BANDUNG',
     OriOfficeCode: '12',
     OriOfficeName: 'JAWA BARAT',
   },
   {
-    VendorCode: 'A13AD60506',
-    VendorName: 'HYUNDAI SURABAYA',
+    VendorCode: 'K13AD60506',
+    VendorName: 'KIA SURABAYA',
     ZipCode: '60264',
     City: 'SURABAYA',
     OriOfficeCode: '13',
@@ -48,46 +48,46 @@ const MOCK_VENDORS: Vendor[] = [
   },
 ];
 
-// Mock Data - Asset Masters (Models)
+// Mock Data - Asset Masters (KIA models). Asset codes are placeholders for offline mock only.
 const MOCK_ASSET_MASTERS: AssetMaster[] = [
   {
-    AssetCategoryName: 'SUV',
-    AssetCode: '4U',
-    AssetName: 'THE ALL NEW SANTA FE',
+    AssetCategoryName: 'MPV',
+    AssetCode: 'CR',
+    AssetName: 'CARNIVAL',
     Price: 724000000,
-    FullAssetCode: 'HYUNDAI4U',
-    ManufacturingYear: 2025,
-  },
-  {
-    AssetCategoryName: 'SUV',
-    AssetCode: '4V',
-    AssetName: 'CRETA',
-    Price: 389000000,
-    FullAssetCode: 'HYUNDAI4V',
+    FullAssetCode: 'KIACR',
     ManufacturingYear: 2025,
   },
   {
     AssetCategoryName: 'MPV',
-    AssetCode: '4S',
-    AssetName: 'STARIA',
-    Price: 549000000,
-    FullAssetCode: 'HYUNDAI4S',
+    AssetCode: 'CA',
+    AssetName: 'CARENS',
+    Price: 389000000,
+    FullAssetCode: 'KIACA',
     ManufacturingYear: 2025,
   },
   {
     AssetCategoryName: 'SUV',
-    AssetCode: '4T',
-    AssetName: 'TUCSON',
+    AssetCode: 'SE',
+    AssetName: 'SELTOS',
+    Price: 349000000,
+    FullAssetCode: 'KIASE',
+    ManufacturingYear: 2025,
+  },
+  {
+    AssetCategoryName: 'SUV',
+    AssetCode: 'SP',
+    AssetName: 'SPORTAGE',
     Price: 519000000,
-    FullAssetCode: 'HYUNDAI4T',
+    FullAssetCode: 'KIASP',
     ManufacturingYear: 2025,
   },
   {
     AssetCategoryName: 'EV',
-    AssetCode: '4E',
-    AssetName: 'IONIQ 5',
+    AssetCode: 'E5',
+    AssetName: 'EV5',
     Price: 699000000,
-    FullAssetCode: 'HYUNDAI4E',
+    FullAssetCode: 'KIAE5',
     ManufacturingYear: 2025,
   },
 ];
@@ -100,27 +100,25 @@ const MOCK_MANUFACTURING_YEARS: KeyValuePair[] = [
 
 // Mock Data - Variants/Trims (dibuat berdasarkan model)
 const MOCK_VARIANTS: Record<string, KeyValuePair[]> = {
-  '4U': [
-    { Key: '4UW7D5G1FEV1GG004', Value: 'SANTA FE HEV PRIME' },
-    { Key: '4UW6D5G1FEV1HH004', Value: 'SANTA FE HEV CALLIGRAPHY' },
-    { Key: '4UW5D5G1FEV1II004', Value: 'SANTA FE GASOLINE PRIME' },
+  CR: [
+    { Key: 'CRW7D5G1FEV1GG004', Value: 'CARNIVAL PRESTIGE' },
+    { Key: 'CRW6D5G1FEV1HH004', Value: 'CARNIVAL LUXURY' },
   ],
-  '4V': [
-    { Key: '4VW7D5G1FEV1GG004', Value: 'CRETA PRIME' },
-    { Key: '4VW6D5G1FEV1HH004', Value: 'CRETA SIGNATURE' },
-    { Key: '4VW5D5G1FEV1II004', Value: 'CRETA ADVENTURE' },
+  CA: [
+    { Key: 'CAW7D5G1FEV1GG004', Value: 'CARENS PRESTIGE' },
+    { Key: 'CAW6D5G1FEV1HH004', Value: 'CARENS EX' },
   ],
-  '4S': [
-    { Key: '4SW7D5G1FEV1GG004', Value: 'STARIA PREMIUM' },
-    { Key: '4SW6D5G1FEV1HH004', Value: 'STARIA LUXURY' },
+  SE: [
+    { Key: 'SEW7D5G1FEV1GG004', Value: 'SELTOS EX' },
+    { Key: 'SEW6D5G1FEV1HH004', Value: 'SELTOS PRESTIGE' },
   ],
-  '4T': [
-    { Key: '4TW7D5G1FEV1GG004', Value: 'TUCSON PRIME' },
-    { Key: '4TW6D5G1FEV1HH004', Value: 'TUCSON SIGNATURE' },
+  SP: [
+    { Key: 'SPW7D5G1FEV1GG004', Value: 'SPORTAGE EX' },
+    { Key: 'SPW6D5G1FEV1HH004', Value: 'SPORTAGE PRESTIGE' },
   ],
-  '4E': [
-    { Key: '4EW7D5G1FEV1GG004', Value: 'IONIQ 5 PREMIUM' },
-    { Key: '4EW6D5G1FEV1HH004', Value: 'IONIQ 5 SIGNATURE' },
+  E5: [
+    { Key: 'E5W7D5G1FEV1GG004', Value: 'EV5 AIR' },
+    { Key: 'E5W6D5G1FEV1HH004', Value: 'EV5 GT-LINE' },
   ],
 };
 
@@ -164,9 +162,9 @@ const MOCK_INTERIOR_COLORS: Record<string, KeyValuePair[]> = {
 
 // Mock Data - Sales Person
 const MOCK_SALES_PERSONS: KeyValuePair[] = [
-  { Key: 'HYUNDAI.TANGERANG.EMP.UDIN', Value: 'HYUNDAI TANGERANG EMP UDIN' },
-  { Key: 'HYUNDAI.JAKARTA.EMP.SARI', Value: 'HYUNDAI JAKARTA EMP SARI' },
-  { Key: 'HYUNDAI.BANDUNG.EMP.BUDI', Value: 'HYUNDAI BANDUNG EMP BUDI' },
+  { Key: 'KIA.TANGERANG.EMP.UDIN', Value: 'KIA TANGERANG EMP UDIN' },
+  { Key: 'KIA.JAKARTA.EMP.SARI', Value: 'KIA JAKARTA EMP SARI' },
+  { Key: 'KIA.BANDUNG.EMP.BUDI', Value: 'KIA BANDUNG EMP BUDI' },
 ];
 
 // Product definitions aligned with Postman collection (GetListDefaultProductFromRuleByLeadNo)
