@@ -7,6 +7,11 @@ import type { AssetMaster } from '@/app/types/credit-simulation';
 import { normalizeVehicleModelName } from '@/lib/vehicle-model-images';
 import { adminSyncLimiter, tooManyRequestsResponse } from '@/lib/ratelimit';
 import { getHyundaiRequestHeaders, API_BASE_URL } from '@/lib/hyundai-api-client';
+import { BRAND, getBrandMasterDealerCode } from '@/lib/brand';
+import {
+  HYUNDAI_VENDOR_LIST_PATH,
+  buildHyundaiVendorListBody,
+} from '@/lib/hyundai-vendor-list';
 import {
   mockApi,
   isMockApiActive,
@@ -15,13 +20,9 @@ import {
 } from '@/lib/mock-api';
 import { getMockApiSettings } from '@/lib/site-settings';
 
-// Canonical dealer used to retrieve the full Hyundai model catalog with
-// starting prices. Confirmed via Postman collection (HCSR3 v1.1) — calling
-// `GetAllAssetMasterLvl2AndStartingPrice` with this DealerCode returns the
-// national model list (currently 13 models). Override via env if Confins
-// ever rotates this code.
-const CANONICAL_DEALER_CODE =
-  process.env.HYUNDAI_MASTER_DEALER_CODE || 'A11AD12404';
+// Canonical dealer used to retrieve the national KIA model catalog with
+// starting prices. Override via `BRAND_MASTER_DEALER_CODE` if Confins rotates it.
+const CANONICAL_DEALER_CODE = getBrandMasterDealerCode();
 
 const CONNECT_TIMEOUT_MS = 30_000;
 const REQUEST_TIMEOUT_MS = 60_000;
@@ -35,6 +36,40 @@ type AssetsResponse = {
   Message?: string;
 };
 
+type VendorListResponse = {
+  ReturnObject?: Array<{ VendorCode?: string }>;
+};
+
+async function resolveDealerCode(headers: Record<string, string>): Promise<string | null> {
+  if (CANONICAL_DEALER_CODE) return CANONICAL_DEALER_CODE;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const response = await undiciFetch(`${API_BASE_URL}${HYUNDAI_VENDOR_LIST_PATH}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(
+        buildHyundaiVendorListBody({
+          hasAvailableAssetOnly: true,
+          hasCmoAssignedOnly: false,
+        })
+      ),
+      signal: controller.signal,
+      dispatcher: hyundaiAgent,
+    });
+    const text = await response.text();
+    if (!response.ok) return null;
+    const data = text ? (JSON.parse(text) as VendorListResponse) : {};
+    const code = data.ReturnObject?.find((vendor) => vendor.VendorCode?.trim())?.VendorCode;
+    return code?.trim() || null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 async function fetchMasterAssets(): Promise<{
   ok: true;
   assets: AssetMaster[];
@@ -46,9 +81,9 @@ async function fetchMasterAssets(): Promise<{
   const siteMock = await getMockApiSettings();
   if (isMockApiActive(siteMock.enabled)) {
     const mockResponse = mockApi.getAssetMasters({
-      AssetHierarchyLv1Code: 'HYUNDAI',
+      AssetHierarchyLv1Code: BRAND.hierarchyLv1Code,
       CmoEmpNo: '',
-      DealerCode: CANONICAL_DEALER_CODE,
+      DealerCode: CANONICAL_DEALER_CODE || 'MOCK',
       GetLatestAsset: true,
     });
     return {
@@ -62,6 +97,15 @@ async function fetchMasterAssets(): Promise<{
     return { ok: false, status: 503, error: PRODUCTION_DATA_ERROR_MESSAGE };
   }
 
+  const dealerCode = await resolveDealerCode(headers);
+  if (!dealerCode) {
+    return {
+      ok: false,
+      status: 503,
+      error: 'Dealer KIA tidak ditemukan. Set BRAND_MASTER_DEALER_CODE di environment.',
+    };
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
@@ -71,9 +115,9 @@ async function fetchMasterAssets(): Promise<{
         method: 'POST',
         headers,
         body: JSON.stringify({
-          AssetHierarchyLv1Code: 'HYUNDAI',
+          AssetHierarchyLv1Code: BRAND.hierarchyLv1Code,
           CmoEmpNo: '',
-          DealerCode: CANONICAL_DEALER_CODE,
+          DealerCode: dealerCode,
           GetLatestAsset: true,
         }),
         signal: controller.signal,
