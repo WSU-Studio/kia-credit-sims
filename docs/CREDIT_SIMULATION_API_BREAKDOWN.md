@@ -119,10 +119,10 @@ Env: `CREDIT_SIMULATION_USERNAME`, `CREDIT_SIMULATION_PASSWORD`. Implementasi: `
 **Request:**
 ```json
 {
-  "AssetHierarchyLv1Code": "HYUNDAI", // Hardcoded
+  "AssetHierarchyLv1Code": "KIA",
   "CmoEmpNo": "",
-  "DealerCode": "A11AD12404", // Required
-  "GetLatestAsset": true // Optional
+  "DealerCode": "A11AD12404",
+  "GetLatestAsset": true
 }
 ```
 
@@ -402,7 +402,7 @@ Hasil simulasi menampilkan:
 
 3. **Harga OTR:** User harus input harga OTR manual (bisa dari konfigurasi trim atau input manual).
 
-4. **Asset Code "4U":** Hardcoded untuk mobil Hyundai (dari requirement).
+4. **Asset Code:** Diambil dari catalog Confins per `AssetHierarchyLv1Code` KIA (lihat `lib/brand.ts`).
 
 5. **Response Structure:** Semua API menggunakan struktur response standar dengan `ReturnObject`, `HeaderObj`, `StatusCode`, dll.
 

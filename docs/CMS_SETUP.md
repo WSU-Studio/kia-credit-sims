@@ -19,10 +19,10 @@ Buat file `.env` di root project dengan konfigurasi berikut:
 
 ```env
 # Database
-DATABASE_URL="postgresql://username:password@localhost:5432/hcfi_credit?schema=public"
+DATABASE_URL="postgresql://username:password@localhost:5432/kia-credit-sims?schema=public"
 
 # NextAuth
-NEXTAUTH_URL="http://localhost:3070"
+NEXTAUTH_URL="http://localhost:3071"
 NEXTAUTH_SECRET="your-secret-key-here" # Generate dengan: openssl rand -base64 32
 
 # S3 Media Storage
@@ -43,7 +43,7 @@ LEADS_PURGE_CONFIRM_PHRASE="HAPUS-SEMUA-LEADS"
 
 ### 2. Database Setup
 
-1. Pastikan PostgreSQL server sudah running (hcfi-credit di pgAdmin4)
+1. Buat database `kia-credit-sims` dan pastikan `DATABASE_URL` di `.env` mengarah ke sana (bukan DB HCFI).
 2. Jalankan migration:
 ```bash
 npm run db:migrate
@@ -178,7 +178,7 @@ npm run db:studio
 **Database connection error**
 - Pastikan PostgreSQL running
 - Check DATABASE_URL di `.env`
-- Pastikan database `hcfi_credit` sudah dibuat
+- Pastikan database `kia-credit-sims` sudah dibuat
 
 **Media upload tidak bekerja**
 - Pastikan AWS_S3_BUCKET, AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY di-set
