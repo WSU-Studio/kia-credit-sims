@@ -44,7 +44,7 @@ export interface AssetMaster {
   AssetCode: string; // 4U, 4V, etc
   AssetName: string; // THE ALL NEW SANTA FE
   Price: number; // Starting price
-  FullAssetCode: string; // HYUNDAI4U
+  FullAssetCode: string; // KIA + AssetCode, e.g. KIACR
   ManufacturingYear?: number;
 }
 

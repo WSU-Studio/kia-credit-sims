@@ -315,7 +315,7 @@ export function VehicleModelImagesManager() {
                 <input
                   value={form.fullAssetCode}
                   onChange={(e) => setForm((prev) => ({ ...prev, fullAssetCode: e.target.value }))}
-                  placeholder="contoh: HYUNDAI4U"
+                  placeholder="contoh: KIACR"
                   className="w-full rounded-lg border text-gray-900 border-gray-300 px-3 py-2.5 text-sm focus:border-[#002c5f] focus:outline-none"
                 />
               </div>
