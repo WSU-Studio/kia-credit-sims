@@ -1,9 +1,11 @@
 /** Postman v1.7 — GetListVendorAndVendorCity */
 
+import { BRAND } from '@/lib/brand';
+
 export const HYUNDAI_VENDOR_LIST_PATH =
   '/Foundation/v2/VendorObX/GetListVendorAndVendorCity';
 
-export const HYUNDAI_SUPPLIER_BRAND_CODE = 'HYUNDAI';
+export const HYUNDAI_SUPPLIER_BRAND_CODE = BRAND.hierarchyLv1Code;
 
 export type HyundaiVendorListRequest = {
   hasAvailableAssetOnly?: boolean;
