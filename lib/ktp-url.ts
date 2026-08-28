@@ -1,3 +1,4 @@
+import { getDevOriginFallback } from '@/lib/brand';
 import { extractBucketAndKeyFromS3Url, isLeadKtpS3Key } from '@/lib/s3-url';
 
 export const KTP_OBJECT_PREFIX = 'hcfi_leads_ktp/';
@@ -56,5 +57,5 @@ export function resolveKtpUploadOrigin(request: Request): string {
   const fromEnv = process.env.NEXTAUTH_URL?.trim();
   if (fromEnv) return fromEnv.replace(/\/$/, '');
 
-  return 'http://localhost:3070';
+  return getDevOriginFallback();
 }
