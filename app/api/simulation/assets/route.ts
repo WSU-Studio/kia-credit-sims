@@ -9,6 +9,7 @@ import {
 } from '@/lib/mock-api';
 import { getMockApiSettings } from '@/lib/site-settings';
 import { getHyundaiRequestHeaders, API_BASE_URL } from '@/lib/hyundai-api-client';
+import { BRAND } from '@/lib/brand';
 import {
   HYUNDAI_VENDOR_LIST_PATH,
   buildHyundaiVendorListBody,
@@ -124,7 +125,7 @@ async function fetchAssetsByDealer(
         method: 'POST',
         headers,
         body: JSON.stringify({
-          AssetHierarchyLv1Code: 'HYUNDAI',
+          AssetHierarchyLv1Code: BRAND.hierarchyLv1Code,
           CmoEmpNo: '',
           DealerCode: dealerCode,
           GetLatestAsset: getLatestAsset,
@@ -223,7 +224,7 @@ export async function POST(request: NextRequest) {
   const body = parsed.data;
   const useGlobalCatalog = body.GlobalCatalog === true;
   const payload = {
-    AssetHierarchyLv1Code: 'HYUNDAI' as const,
+    AssetHierarchyLv1Code: BRAND.hierarchyLv1Code,
     CmoEmpNo: body.CmoEmpNo || '',
     DealerCode: body.DealerCode,
     GetLatestAsset: body.GetLatestAsset ?? true,

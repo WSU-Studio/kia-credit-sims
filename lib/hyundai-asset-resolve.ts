@@ -1,4 +1,5 @@
 import type { AssetMaster } from '@/app/types/credit-simulation';
+import { BRAND } from '@/lib/brand';
 import { hyundaiPost } from '@/lib/hyundai-api-post';
 import type { LeadAssetSnapshot } from '@/lib/lead-asset-snapshot';
 
@@ -65,7 +66,7 @@ async function fetchModels(dealerCode: string): Promise<AssetMaster[]> {
   const data = await hyundaiPost<{ ListAssetMasterObj?: AssetMaster[] }>(
     '/Foundation/v1/AssetMasterX/GetAllAssetMasterLvl2AndStartingPrice',
     {
-      AssetHierarchyLv1Code: 'HYUNDAI',
+      AssetHierarchyLv1Code: BRAND.hierarchyLv1Code,
       CmoEmpNo: '',
       DealerCode: dealerCode,
       GetLatestAsset: true,
