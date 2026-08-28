@@ -11,7 +11,7 @@ jobs:
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       MODE_ENV: production
-      HCFI_ENV_FILE: /data/hcfi/nextjs-prod.env
+      KIA_ENV_FILE: /data/kia/nextjs-prod.env
 
     steps:
       - name: Checkout code
@@ -23,10 +23,10 @@ jobs:
       - name: Write runtime env file
         run: |
           set -euo pipefail
-          if [ -d "$(dirname "$HCFI_ENV_FILE")" ] && [ -w "$(dirname "$HCFI_ENV_FILE")" ]; then
-            ENV_FILE="$HCFI_ENV_FILE"
+          if [ -d "$(dirname "$KIA_ENV_FILE")" ] && [ -w "$(dirname "$KIA_ENV_FILE")" ]; then
+            ENV_FILE="$KIA_ENV_FILE"
           else
-            ENV_FILE="${HOME}/.hcfi/nextjs-prod.env"
+            ENV_FILE="${HOME}/.kia/nextjs-prod.env"
             mkdir -p "$(dirname "$ENV_FILE")"
           fi
           echo "Using ENV_FILE=$ENV_FILE"
@@ -79,7 +79,7 @@ jobs:
           set +a
 
           # Recreate so PM2 dump stores injected env (plain restart can keep stale env)
-          pm2 delete nextjs-app 2>/dev/null || true
-          pm2 start npm --name nextjs-app -- start
+          pm2 delete kia-nextjs-app 2>/dev/null || true
+          pm2 start npm --name kia-nextjs-app -- start
           pm2 save
           
