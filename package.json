@@ -1,9 +1,9 @@
 {
-  "name": "hcfi-credit-sims",
+  "name": "kia-credit-sims",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 3070 --webpack",
+    "dev": "next dev --port 3071 --webpack",
     "build": "prisma generate && next build --webpack",
     "start": "next start -p ${PORT:-8080}",
     "lint": "eslint",
