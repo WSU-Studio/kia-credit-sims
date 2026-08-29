@@ -18,7 +18,7 @@ const AUTO_SLIDE_INTERVAL_MS = 7000;
 const TRANSITION_DURATION_MS = 600;
 
 const ctaButtonClass =
-  "w-fit inline-flex self-end items-center justify-center align-baseline gap-1 px-5 py-2.5 text-sm font-semibold text-white bg-[#1956FF] rounded-lg hover:bg-[#1956FF]/90 transition-colors focus:outline-none focus:ring-2 focus:ring-[#008AEC] focus:ring-offset-2 focus:ring-offset-slate-800";
+  "w-fit inline-flex self-end items-center justify-center align-baseline gap-1 px-5 py-2.5 text-sm font-semibold text-[#05141f] bg-white hover:bg-white/90 transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#05141f]";
 
 function CTAButton({ label, href }: { label: string; href: string }) {
   const isInternal = href.startsWith("/");
@@ -217,10 +217,10 @@ export function HeroSlider({ slides, transition = 'slide' }: HeroSliderProps) {
                   )}
                   <Container className="relative flex h-full items-end md:pb-8" noDefaultPadding>
                     <Link href={slide.ctaUrl || ''} className={`absolute inset-0 md:hidden ${slide.ctaUrl ? '' : 'pointer-events-none'}`}></Link>
-                    <div className="w-full flex flex-col md:max-w-3xl space-y-3 bg-slate-800/60 p-5 pb-3 md:pb-6 md:rounded-xl">
+                    <div className="w-full flex flex-col md:max-w-3xl space-y-3 bg-[#05141f]/70 p-5 pb-3 md:pb-6">
                       <p className="text-lg md:text-2xl lg:text-3xl font-semibold leading-tight text-white">
                         {slide.title}{" "}
-                        <span className="text-blue-600/90">{slide.highlight}</span>
+                        <span className="text-white">{slide.highlight}</span>
                       </p>
                       <p className="w-full text-xs md:text-sm leading-relaxed text-white/90 md:text-base line-clamp-3 md:line-clamp-none">
                         {slide.description}
@@ -274,10 +274,10 @@ export function HeroSlider({ slides, transition = 'slide' }: HeroSliderProps) {
                   )}
                   <Container className="relative flex h-full items-end pb-8 md:pb-12">
                     <Link href={slide.ctaUrl || ''} className={`absolute inset-0 md:hidden ${slide.ctaUrl ? '' : 'pointer-events-none'}`}></Link>
-                    <div className="w-full max-w-3xl space-y-3 bg-slate-800/60 p-6 pb-3 md:pb-5 rounded-xl">
+                    <div className="w-full max-w-3xl space-y-3 bg-[#05141f]/70 p-6 pb-3 md:pb-5">
                       <p className="text-lg md:text-2xl lg:text-3xl font-semibold leading-tight text-white">
                         {slide.title}{" "}
-                        <span className="text-blue-600/90">{slide.highlight}</span>
+                        <span className="text-white">{slide.highlight}</span>
                       </p>
                       <p className="w-full text-xs md:text-sm leading-relaxed text-white/90 md:text-base line-clamp-3 md:line-clamp-none">
                         {slide.description}
@@ -305,10 +305,10 @@ export function HeroSlider({ slides, transition = 'slide' }: HeroSliderProps) {
               aria-label={t("slideLabel", { n: idx + 1 })}
               aria-pressed={idx === index}
               onClick={() => goTo(idx)}
-              className={`h-2 w-8 rounded-full transition cursor-pointer duration-300 ${
+              className={`h-0.5 w-8 transition cursor-pointer duration-300 ${
                 idx === index
-                  ? "bg-gray-100 shadow-[0_0_0_4px_rgba(0,138,236,0.25)]"
-                  : "bg-white/30 hover:bg-white/60"
+                  ? "bg-white"
+                  : "bg-white/35 hover:bg-white/70"
               }`}
             />
           ))}
