@@ -82,7 +82,7 @@ async function getBanners(locale: Locale) {
     return [
       {
         title: isEn ? "Get New Car Credit Benefits at" : "Dapatkan Benefit Kredit Mobil Baru Anda di",
-        highlight: "Hyundai Finance",
+        highlight: "KIA",
         description:
           isEn
             ? "Experience an easier credit process with professional service and trusted offers."
@@ -146,7 +146,7 @@ async function getProducts(locale: Locale) {
       {
         id: undefined,
         title: "Smart Installment Program",
-        subtitle: "Stargazer & Creta",
+        subtitle: "Carnival & Carens",
         image: "/images/product-01.jpg",
       },
       {
