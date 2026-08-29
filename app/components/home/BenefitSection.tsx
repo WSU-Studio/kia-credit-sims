@@ -41,7 +41,7 @@ export function BenefitSection({
   const brand = (isEn ? headingBrandEn : headingBrandId)?.trim() || t("benefitBrand");
 
   return (
-    <section id="benefits" className="bg-slate-100 py-6 md:py-8">
+    <section id="benefits" className="bg-white py-6 md:py-8">
       <Container>
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-8 lg:gap-12">
           <div className="flex-1">
@@ -49,7 +49,7 @@ export function BenefitSection({
               <span className="block">{line1}</span>
               <span className="block">{line2}</span>
               <span className="block">
-                {line3} <span className="text-[#002c5f]">{brand}</span>
+                {line3} <span className="text-[var(--accent)]">{brand}</span>
               </span>
             </h2>
           </div>

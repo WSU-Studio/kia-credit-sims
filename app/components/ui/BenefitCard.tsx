@@ -10,7 +10,7 @@ type BenefitCardProps = Benefit & {
 function BenefitCardContent({ title, description }: Pick<Benefit, "title" | "description">) {
   return (
     <>
-      <p className="text-base font-semibold leading-snug text-[#002c5f] mb-2">{title}</p>
+      <p className="text-base font-semibold leading-snug text-[var(--accent)] mb-2">{title}</p>
       <p className="text-sm text-[var(--foreground)] leading-relaxed">{description}</p>
     </>
   );
@@ -28,10 +28,10 @@ export function BenefitCard({
   const clickable =
     isClickable === true && rawUrl !== "" && isSafeHref(rawUrl);
   const base =
-    "block rounded-xl bg-white text-[var(--foreground)] shadow-md border border-[#002c5f]/20 px-4 py-3 transition-all";
+    "block rounded-xl bg-white text-[var(--foreground)] shadow-md border border-[var(--accent)]/15 px-4 py-3 transition-all";
   const interactive =
-    "cursor-pointer hover:border-[#002c5f]/40 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#002c5f]/30";
-  const staticCard = "hover:border-[#002c5f]/40 hover:shadow-lg";
+    "cursor-pointer hover:border-[var(--accent)]/40 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]/30";
+  const staticCard = "hover:border-[var(--accent)]/40 hover:shadow-lg";
   const cardClassName = className
     ? `${base} ${clickable ? interactive : staticCard} ${className}`
     : `${base} ${clickable ? interactive : staticCard}`;
