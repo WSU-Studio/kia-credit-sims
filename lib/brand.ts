@@ -8,9 +8,15 @@
 export const BRAND = {
   code: 'KIA',
   slug: 'kia-credit-sims',
+  displayName: 'KIA',
   /** Confins SupplierBrandCode, AssetHierarchyLv1Code, and AssetLv1Code. */
   hierarchyLv1Code: 'KIA',
   devPort: 3071,
+  /** Interim public theme from kia.id until official guidelines arrive. */
+  theme: {
+    ink: '#05141f',
+    paper: '#ffffff',
+  },
 } as const;
 
 export type BrandHierarchyLv1Code = typeof BRAND.hierarchyLv1Code;
