@@ -4,7 +4,7 @@ Living project index for `kia-credit-sims` (KIA financing site).
 
 ## Overview
 
-Fork of `hfci-credit-sims` for Hyundai Capital KIA financing. Engine (LOS Confins, CMS, admin, dealer portal, simulation wizard) is reused. Public homepage design is on hold until KIA/Hyundai guidelines arrive.
+Fork of `hfci-credit-sims` for Hyundai Capital KIA financing. Engine (LOS Confins, CMS, admin, dealer portal, simulation wizard) is reused. Public chrome uses an interim KIA theme (white / `#05141f`) adapted from kia.id until official design guidelines arrive.
 
 ## Architecture
 
@@ -21,11 +21,12 @@ Fork of `hfci-credit-sims` for Hyundai Capital KIA financing. Engine (LOS Confin
 
 ## Components
 
-- `lib/brand.ts` — KIA Confins brand code, slug, dev port, master dealer env
+- `app/components/brand/KiaLogo.tsx` — official KIA wordmark SVG, fill via `currentColor`
+- `lib/brand.ts` — KIA Confins brand code, slug, theme tokens, master dealer env
 - Simulation APIs (`app/api/simulation/assets`, `lead-asset`) send `AssetHierarchyLv1Code` / `AssetLv1Code` from `BRAND`
 - Vendor list body uses `SupplierBrandCode` from `BRAND.hierarchyLv1Code`
 
 ## Patterns
 
-- Do not redesign the public homepage until design guidelines arrive
-- Keep Confins brand literals in `lib/brand.ts` — do not scatter `'KIA'` / `'HYUNDAI'` in API routes
+- Interim public theme from kia.id: white + `#05141f`, logo as `KiaLogo` component (`currentColor`)
+- Official homepage guidelines still pending; current chrome is an adaptation of existing components
