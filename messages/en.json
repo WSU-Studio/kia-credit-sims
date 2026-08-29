@@ -8,7 +8,7 @@
   },
   "footer": {
     "customerCare": "Customer Care",
-    "downloadApp": "Download Hyundai Finance App at:",
+    "downloadApp": "Download the app at:",
     "privacyPolicy": "Privacy Policy",
     "termsCondition": "Terms & Conditions",
     "disclaimerDefault": "PT Hyundai Capital Finance Indonesia is licensed and supervised by the Financial Services Authority",
@@ -35,30 +35,30 @@
   "home": {
     "productSectionTitle": "Smart Credit, For Your Needs",
     "articlesTitle": "Articles",
-    "metaTitle": "Hyundai Capital",
-    "metaDescription": "Hyundai Capital is a finance company providing credit for Hyundai vehicle purchases.",
+    "metaTitle": "KIA",
+    "metaDescription": "Credit simulation for KIA vehicle financing with professional service.",
     "benefitHeading1": "Get Benefits",
     "benefitHeading2": "For Your New Car Credit",
     "benefitHeading3": "at",
-    "benefitBrand": "Hyundai Finance"
+    "benefitBrand": "KIA"
   },
   "products": {
     "pageTitle": "All Products",
-    "pageDescription": "Credit and financing programs from Hyundai Capital for your needs",
-    "metaTitle": "Hyundai Capital - Products",
-    "metaDescription": "Credit products and financing programs from Hyundai Capital."
+    "pageDescription": "KIA credit and financing programs for your needs",
+    "metaTitle": "KIA - Products",
+    "metaDescription": "Credit products and financing programs for KIA vehicles."
   },
   "promo": {
     "pageTitle": "Promotions",
-    "pageDescription": "Offers and promotions from Hyundai Capital",
-    "metaTitle": "Hyundai Capital - Promotions",
-    "metaDescription": "View the latest promotions and offers from Hyundai Capital."
+    "pageDescription": "KIA financing offers and promotions",
+    "metaTitle": "KIA - Promotions",
+    "metaDescription": "View the latest KIA financing promotions and offers."
   },
   "tracking": {
     "pageTitle": "Track Application Status",
     "pageDescription": "Enter your Lead number (LeadNo) from your simulation or application to view the process history and status of your credit application.",
-    "metaTitle": "Hyundai Capital - Track Status",
-    "metaDescription": "Track your Hyundai Finance credit application status with your LeadNo.",
+    "metaTitle": "KIA - Track Status",
+    "metaDescription": "Track your KIA credit application status with your LeadNo.",
     "leadNoLabel": "Lead Number (LeadNo)",
     "leadNoPlaceholder": "Example: 11STGLD20260500031",
     "leadNoHint": "You can use the LeadNo from your simulation result or the LeadNo after your application is processed. A simulation LeadNo will be resolved to the LeadNo monitored in the credit system.",
@@ -98,12 +98,12 @@
   },
   "articles": {
     "pageTitle": "Articles",
-    "pageDescription": "Latest articles and information from Hyundai Capital",
-    "metaTitle": "Hyundai Capital - Articles",
-    "metaDescription": "Articles and latest information from Hyundai Capital."
+    "pageDescription": "Latest articles and information on KIA financing",
+    "metaTitle": "KIA - Articles",
+    "metaDescription": "Articles and latest information on KIA financing."
   },
   "metadata": {
-    "siteTitle": "Hyundai Capital - Credit Simulation",
+    "siteTitle": "KIA - Credit Simulation",
     "siteDescription": "Vehicle financing credit simulation with professional service"
   },
   "creditSimulation": {

@@ -8,7 +8,7 @@
   },
   "footer": {
     "customerCare": "Customer Care",
-    "downloadApp": "Unduh Aplikasi Hyundai Finance di:",
+    "downloadApp": "Unduh Aplikasi di:",
     "privacyPolicy": "Privacy Policy",
     "termsCondition": "Terms & Condition",
     "disclaimerDefault": "PT Hyundai Capital Finance Indonesia berizin dan diawasi oleh Otoritas Jasa Keuangan",
@@ -35,30 +35,30 @@
   "home": {
     "productSectionTitle": "Kredit Pintar, Untuk Kebutuhan Anda",
     "articlesTitle": "Artikel",
-    "metaTitle": "Hyundai Capital",
-    "metaDescription": "Hyundai Capital adalah perusahaan kredit yang menyediakan kredit untuk pembelian mobil Hyundai.",
+    "metaTitle": "KIA",
+    "metaDescription": "Simulasi kredit pembiayaan kendaraan KIA dengan layanan profesional.",
     "benefitHeading1": "Dapatkan Benefit",
     "benefitHeading2": "Kredit Mobil Baru Anda",
     "benefitHeading3": "di",
-    "benefitBrand": "Hyundai Finance"
+    "benefitBrand": "KIA"
   },
   "products": {
     "pageTitle": "Semua Produk",
-    "pageDescription": "Program kredit dan pembiayaan dari Hyundai Capital untuk kebutuhan Anda",
-    "metaTitle": "Hyundai Capital - Produk",
-    "metaDescription": "Produk kredit dan program pembiayaan dari Hyundai Capital."
+    "pageDescription": "Program kredit dan pembiayaan KIA untuk kebutuhan Anda",
+    "metaTitle": "KIA - Produk",
+    "metaDescription": "Produk kredit dan program pembiayaan kendaraan KIA."
   },
   "promo": {
     "pageTitle": "Promosi",
-    "pageDescription": "Penawaran dan promosi dari Hyundai Capital",
-    "metaTitle": "Hyundai Capital - Promosi",
-    "metaDescription": "Lihat promosi dan penawaran terbaru dari Hyundai Capital."
+    "pageDescription": "Penawaran dan promosi pembiayaan KIA",
+    "metaTitle": "KIA - Promosi",
+    "metaDescription": "Lihat promosi dan penawaran terbaru pembiayaan KIA."
   },
   "tracking": {
     "pageTitle": "Lacak Status Pengajuan",
     "pageDescription": "Masukkan Nomor Lead (LeadNo) dari simulasi atau pengajuan Anda untuk melihat riwayat dan status pengajuan kredit Anda.",
-    "metaTitle": "Hyundai Capital - Lacak Status",
-    "metaDescription": "Lacak status pengajuan kredit Hyundai Finance dengan nomor LeadNo.",
+    "metaTitle": "KIA - Lacak Status",
+    "metaDescription": "Lacak status pengajuan kredit KIA dengan nomor LeadNo.",
     "leadNoLabel": "Nomor Lead (LeadNo)",
     "leadNoPlaceholder": "Contoh: 11STGLD20260500031",
     "leadNoHint": "Boleh menggunakan Nomor Lead (LeadNo) dari hasil simulasi atau Nomor Lead (LeadNo) setelah pengajuan diproses.",
@@ -98,12 +98,12 @@
   },
   "articles": {
     "pageTitle": "Artikel",
-    "pageDescription": "Artikel dan informasi terbaru dari Hyundai Capital",
-    "metaTitle": "Hyundai Capital - Artikel",
-    "metaDescription": "Artikel dan informasi terbaru dari Hyundai Capital."
+    "pageDescription": "Artikel dan informasi terbaru pembiayaan KIA",
+    "metaTitle": "KIA - Artikel",
+    "metaDescription": "Artikel dan informasi terbaru pembiayaan KIA."
   },
   "metadata": {
-    "siteTitle": "Hyundai Capital - Simulasi Kredit",
+    "siteTitle": "KIA - Simulasi Kredit",
     "siteDescription": "Simulasi kredit pembiayaan kendaraan dengan layanan profesional"
   },
   "creditSimulation": {
