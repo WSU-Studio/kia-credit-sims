@@ -13,6 +13,7 @@ import { getActivePromos } from '../promo-data';
 import { pickLocaleString } from '@/lib/pick-locale';
 import type { Locale } from '@/lib/pick-locale';
 import { getPublicSiteOrigin, ogImageEntry } from '@/lib/seo-url';
+import { BRAND } from '@/lib/brand';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,9 +41,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug, locale } = await params;
   const promo = await getPromoBySlug(slug, locale as Locale);
-  if (!promo) return { title: 'Hyundai Capital' };
+  if (!promo) return { title: BRAND.displayName };
   const siteUrl = getPublicSiteOrigin();
-  const title = `Hyundai Capital - ${promo.title}`;
+  const title = `${BRAND.displayName} - ${promo.title}`;
   const og = ogImageEntry(promo.imageUrl, promo.title);
   const url = siteUrl ? `${siteUrl}/${locale}/promo/${slug}` : undefined;
 

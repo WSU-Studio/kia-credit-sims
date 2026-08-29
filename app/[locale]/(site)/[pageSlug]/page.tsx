@@ -10,6 +10,7 @@ import type { PageLayout, LayoutRow } from '@/app/types';
 import { pickLocaleString } from '@/lib/pick-locale';
 import type { Locale } from '@/lib/pick-locale';
 import { getPublicSiteOrigin, ogImageEntry } from '@/lib/seo-url';
+import { BRAND } from '@/lib/brand';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,7 +61,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { pageSlug, locale } = await params;
   const page = await getPageBySlug(pageSlug, locale as Locale);
-  if (!page) return { title: 'Hyundai Capital' };
+  if (!page) return { title: BRAND.displayName };
   const siteUrl = getPublicSiteOrigin();
   const url = siteUrl ? `${siteUrl}/${locale}/${pageSlug}` : undefined;
   const rawContent = (page as { content?: string | null }).content ?? '';
@@ -68,7 +69,7 @@ export async function generateMetadata({
     rawContent.trim().length > 0
       ? rawContent.replace(/\s+/g, ' ').slice(0, 160).trim()
       : undefined;
-  const title = `Hyundai Capital - ${page.title}`;
+  const title = `${BRAND.displayName} - ${page.title}`;
   const og = ogImageEntry(null, title);
 
   return {
@@ -161,7 +162,7 @@ export default async function StaticPageBySlug({
         {previousSlug && (
           <Link
             href={`/${previousSlug}`}
-            className="inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold text-white bg-[#1956FF] rounded-lg hover:bg-[#1956FF]/90 transition-colors"
+            className="inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold text-white bg-[#05141f] hover:bg-[#05141f]/90 transition-colors"
           >
             Sebelumnya
           </Link>

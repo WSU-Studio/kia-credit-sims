@@ -6,6 +6,7 @@ import { Header } from "@/app/components/layout/Header";
 import { Footer } from "@/app/components/layout/Footer";
 import { WhatsappFAB } from "@/app/components/layout/WhatsappFAB";
 import { AnalyticsScripts } from "@/app/components/layout/AnalyticsScripts";
+import { BRAND } from "@/lib/brand";
 import { CompanyInfo, NavItem } from "@/app/types";
 import { IconBrandWhatsapp, IconBrandInstagram, IconPhone, IconMail } from "@tabler/icons-react";
 import { prisma } from "@/lib/prisma";
@@ -181,7 +182,7 @@ async function getFooterData(
     const copyrightVal = getLocalizedFooterValue(data.copyright, locale);
 
     return {
-      name: "Hyundai Capital",
+      name: BRAND.displayName,
       address: Array.isArray(data.address) ? (data.address as string[]) : defaultAddress,
       legalLinks: legalLinks.length > 0 ? legalLinks : [
         { label: "Privacy Policy", href: "#" },
@@ -198,7 +199,7 @@ async function getFooterData(
   } catch {
     // Fallback to default
     return {
-      name: "Hyundai Capital",
+      name: BRAND.displayName,
       address: [
         "PT Hyundai Capital Finance Indonesia",
         "Sequis Tower, 23rd Floor, Unit 1 - 7, Jl. Jenderal Sudirman",

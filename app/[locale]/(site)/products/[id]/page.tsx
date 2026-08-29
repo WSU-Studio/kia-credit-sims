@@ -11,6 +11,7 @@ import type { PageLayout, LayoutRow } from '@/app/types';
 import { pickLocaleString } from '@/lib/pick-locale';
 import type { Locale } from '@/lib/pick-locale';
 import { getPublicSiteOrigin, ogImageEntry } from '@/lib/seo-url';
+import { BRAND } from '@/lib/brand';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,9 +40,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id, locale } = await params;
   const product = await getProductById(id, locale as Locale);
-  if (!product) return { title: 'Hyundai Capital' };
+  if (!product) return { title: BRAND.displayName };
   const siteUrl = getPublicSiteOrigin();
-  const title = `Hyundai Capital - ${product.title}`;
+  const title = `${BRAND.displayName} - ${product.title}`;
   const og = ogImageEntry(product.imageUrl, product.title);
   const url = siteUrl ? `${siteUrl}/${locale}/products/${id}` : undefined;
 

@@ -6,6 +6,7 @@ import { Container } from '@/app/components/ui/Container';
 import { PreSimulationSummaryView } from '@/app/components/simulation/PreSimulationSummaryView';
 import type { FinalSummaryInfo } from '@/app/types/credit-simulation';
 import { Link } from '@/i18n/navigation';
+import { BRAND } from '@/lib/brand';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,7 +33,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const item = await getPreSim(slug);
   if (!item) return { title: t('notFoundTitle') };
   return {
-    title: `${item.title} | Hyundai Capital`,
+    title: `${item.title} | ${BRAND.displayName}`,
     description: item.vehicleSummary || item.productName || t('metaFallbackDescription'),
   };
 }

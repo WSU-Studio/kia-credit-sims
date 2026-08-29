@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 const defaultLetterhead = {
-  name: 'Hyundai Capital',
+  name: 'KIA',
   address: [
     'PT Hyundai Capital Finance Indonesia',
     'Sequis Tower, 23rd Floor, Unit 1 - 7, Jl. Jenderal Sudirman',

@@ -12,6 +12,7 @@ import { WidgetRenderer } from '@/app/components/page-builder/WidgetRenderer';
 import type { PageLayout, LayoutRow } from '@/app/types';
 import { IconQuoteFilled } from '@tabler/icons-react';
 import { getPublicSiteOrigin, ogImageEntry } from '@/lib/seo-url';
+import { BRAND } from '@/lib/brand';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,9 +46,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug, locale } = await params;
   const article = await getArticleBySlug(slug, locale as Locale);
-  if (!article) return { title: 'Hyundai Capital' };
+  if (!article) return { title: BRAND.displayName };
   const siteUrl = getPublicSiteOrigin();
-  const title = `Hyundai Capital - ${article.title}`;
+  const title = `${BRAND.displayName} - ${article.title}`;
   const imageUrl = (article as { imageUrl?: string | null }).imageUrl;
   const og = ogImageEntry(imageUrl, article.title);
   const url = siteUrl ? `${siteUrl}/${locale}/articles/${slug}` : undefined;
