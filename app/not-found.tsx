@@ -9,7 +9,7 @@ export default function NotFound() {
           <span className="text-[10rem] font-bold text-transparent bg-clip-text bg-gradient-to-br from-slate-300 via-slate-400 to-slate-500 select-none leading-none">
             404
           </span>
-          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-24 h-1.5 rounded-full bg-gradient-to-r from-[#002c5f] to-[#1956af]" />
+          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-24 h-1.5 rounded-full bg-[#05141f]" />
         </div>
 
         <h1 className="text-2xl font-semibold text-slate-800 mb-2">
@@ -38,7 +38,7 @@ export default function NotFound() {
       </div>
 
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-xs text-slate-400">
-        Hyundai Capital
+        KIA
       </div>
     </div>
   );

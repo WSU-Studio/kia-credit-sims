@@ -38,8 +38,8 @@ const hyundaiSans = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Hyundai Capital - Simulasi Kredit",
-  description: "Simulasi kredit pembiayaan kendaraan dengan layanan profesional",
+  title: "KIA - Simulasi Kredit",
+  description: "Simulasi kredit pembiayaan kendaraan KIA dengan layanan profesional",
 };
 
 export default function RootLayout({
@@ -50,7 +50,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${hyundaiSans.variable} ${montserrat.variable} antialiased`}>
-        <div className="min-h-screen bg-white text-white">
+        <div className="min-h-screen bg-white text-[var(--foreground)]">
           {children}
         </div>
       </body>
