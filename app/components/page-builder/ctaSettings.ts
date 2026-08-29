@@ -5,8 +5,8 @@
 import type { CtaWidgetSettings } from '@/app/types';
 
 export const CTA_VARIANT_CLASSES: Record<NonNullable<CtaWidgetSettings['variant']>, string> = {
-  primary: 'bg-[#1956FF] text-white hover:bg-[#1956FF]/90 border-transparent',
-  secondary: 'bg-[#008AEC] text-white hover:bg-[#008AEC]/90 border-transparent',
+  primary: 'bg-[#05141f] text-white hover:bg-[#05141f]/90 border-transparent',
+  secondary: 'bg-white text-[#05141f] hover:bg-white/90 border-[#05141f]',
   outline: 'bg-transparent text-white border-2 border-white/80 hover:bg-white/10',
   ghost: 'bg-white/10 text-white hover:bg-white/20 border-transparent',
 };
@@ -65,7 +65,7 @@ export function getCtaSettingsClasses(
 
   const buttonClassName = [
     'inline-flex items-center justify-center font-semibold rounded-lg border transition-colors',
-    'focus:outline-none focus:ring-2 focus:ring-[#008AEC] focus:ring-offset-2 focus:ring-offset-slate-800',
+    'focus:outline-none focus:ring-2 focus:ring-[#05141f] focus:ring-offset-2 focus:ring-offset-white',
     CTA_VARIANT_CLASSES[variant],
     CTA_SIZE_CLASSES[size],
   ].join(' ');
