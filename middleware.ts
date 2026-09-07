@@ -197,6 +197,23 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  if (pathname.startsWith("/api/otp/") && request.method === "POST") {
+    const ip = getClientIp(request);
+    const rl =
+      ip === "unknown"
+        ? { success: true as const, retryAfterSec: 0 }
+        : loginLimiter.limit(`otp:${ip}`);
+    if (!rl.success) {
+      return finalize(
+        tooManyRequestsResponse(
+          "Too many login attempts. Please try again later.",
+          rl.retryAfterSec
+        ),
+        request
+      );
+    }
+  }
+
   if (pathname.startsWith("/dealer")) {
     const isLoginPage = pathname === "/dealer/login";
     if (!isLoginPage) {
