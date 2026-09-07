@@ -6,7 +6,7 @@ import {
   shouldNotUseMockFallback,
   PRODUCTION_DATA_ERROR_MESSAGE,
 } from '@/lib/mock-api';
-import { getMockApiSettings } from '@/lib/site-settings';
+import { getMockApiSettings, getSalesmanFeeCapsFromSettings } from '@/lib/site-settings';
 import { getHyundaiRequestHeaders, API_BASE_URL } from '@/lib/hyundai-api-client';
 import {
   extractHyundaiErrorId,
@@ -22,6 +22,12 @@ import {
 } from '@/lib/product-calculation-rows';
 import type { ProductCalculation } from '@/app/types/credit-simulation';
 import { getClientIp, simulationLimiter, tooManyRequestsResponse } from '@/lib/ratelimit';
+import {
+  applyFeeOverrideToRows,
+  buildHyundaiFeeRequestFields,
+  clampSalesmanFeeOverride,
+  parseSalesmanFeeOverride,
+} from '@/lib/salesman-fee';
 import {
   invalidInputResponse,
   simulateBodySchema,
@@ -103,11 +109,24 @@ export async function POST(request: NextRequest) {
       isPromotion,
       partnerCode,
       leadNo: parsedLeadNo,
+      adminFeeAmt,
+      provisionFee,
     } = parsed.data;
     const leadNo = parsedLeadNo || undefined;
 
     const preferredFirstInstallment =
       normalizeFirstInstallment(firstInstallment) ?? ('ADDM' as FirstInstallmentType);
+
+    const caps = await getSalesmanFeeCapsFromSettings();
+    const parsedOverride = parseSalesmanFeeOverride({ adminFeeAmt, provisionFee });
+    const feeOverride = parsedOverride
+      ? clampSalesmanFeeOverride(parsedOverride, caps)
+      : null;
+    const feeFields = buildHyundaiFeeRequestFields(feeOverride);
+    const withFeeOverride = (rows: ProductCalculation[]) =>
+      feeOverride
+        ? applyFeeOverrideToRows(rows, feeOverride, Number(otrPrice), Number(dpPrcnt))
+        : rows;
 
     const siteMock = await getMockApiSettings();
     const mockEnabled = isMockApiActive(siteMock.enabled);
@@ -118,7 +137,7 @@ export async function POST(request: NextRequest) {
       if (custom && Array.isArray(custom.ListProductObj) && custom.ListProductObj.length > 0) {
         return NextResponse.json({
           ...buildSimulatePayload(
-            custom.ListProductObj as ProductCalculation[],
+            withFeeOverride(custom.ListProductObj as ProductCalculation[]),
             preferredFirstInstallment,
             custom as Record<string, unknown>
           ),
@@ -131,9 +150,11 @@ export async function POST(request: NextRequest) {
         productCode: String(productCode),
         productName: String(productName),
         firstInstallment: preferredFirstInstallment,
+        adminFeeAmt: feeOverride?.adminFeeAmt,
+        provisionFee: feeOverride?.provisionFee,
       });
       return NextResponse.json({
-        ...buildSimulatePayload(res.ListProductObj, preferredFirstInstallment, res),
+        ...buildSimulatePayload(withFeeOverride(res.ListProductObj), preferredFirstInstallment, res),
         dataSource: 'mock',
       });
     }
@@ -170,6 +191,7 @@ export async function POST(request: NextRequest) {
                 ProductCode: productCode,
                 ProductName: productName,
                 IsPromotion: Boolean(isPromotion),
+                ...feeFields,
               },
               partnerCode
             )
@@ -197,8 +219,10 @@ export async function POST(request: NextRequest) {
         throw new Error(String(apiMessage || 'Calculate failed'));
       }
 
-      const list = ((data as { ListProductObj?: ProductCalculation[] }).ListProductObj ??
-        []) as ProductCalculation[];
+      const list = withFeeOverride(
+        ((data as { ListProductObj?: ProductCalculation[] }).ListProductObj ??
+          []) as ProductCalculation[]
+      );
       return NextResponse.json(
         buildSimulatePayload(list, preferredFirstInstallment, data as Record<string, unknown>)
       );
@@ -229,9 +253,15 @@ export async function POST(request: NextRequest) {
         productCode: String(productCode),
         productName: String(productName),
         firstInstallment: preferredFirstInstallment,
+        adminFeeAmt: feeOverride?.adminFeeAmt,
+        provisionFee: feeOverride?.provisionFee,
       });
       return NextResponse.json({
-        ...buildSimulatePayload(mockResult.ListProductObj, preferredFirstInstallment, mockResult),
+        ...buildSimulatePayload(
+          withFeeOverride(mockResult.ListProductObj),
+          preferredFirstInstallment,
+          mockResult
+        ),
         dataSource: 'mock',
       });
     }
