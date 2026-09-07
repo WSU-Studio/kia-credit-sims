@@ -1,5 +1,6 @@
 import type { FinalSummaryInfo, ProductCalculation } from '@/app/types/credit-simulation';
 import { mapSummaryInfoToFinalSummary } from '@/lib/hyundai-lead-financial';
+import { ntfFromAsset, provisionAmountOf, provisionPercentOf } from '@/lib/salesman-fee';
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
@@ -45,6 +46,8 @@ export function parseLeadSummarySnapshot(raw: unknown): FinalSummaryInfo | null 
     assetInsPaidAmt: num(obj.assetInsPaidAmt),
     feePaidAmt: num(obj.feePaidAmt),
     balloonAmt: num(obj.balloonAmt),
+    provisionFeePrcnt: obj.provisionFeePrcnt != null ? num(obj.provisionFeePrcnt) : undefined,
+    provisionFeeAmt: obj.provisionFeeAmt != null ? num(obj.provisionFeeAmt) : undefined,
     firstInstallment: first,
   };
 }
@@ -69,18 +72,19 @@ export function buildSummaryFromProductRow(params: {
     | 'BalloonAmt'
     | 'AdminFeeAmt'
     | 'ProvisionFee'
+    | 'ProvisionType'
     | 'FiduciaFeeAmt'
   >;
 }): FinalSummaryInfo {
   const discount = Number(params.discount) || 0;
   const assetPriceAmt = Math.max(0, params.otrPrice - discount);
   const downPaymentAmt = Math.round(assetPriceAmt * (params.dpPercent / 100));
-  const ntfAmt = Math.max(0, assetPriceAmt - downPaymentAmt);
+  const ntfAmt = ntfFromAsset(assetPriceAmt, params.dpPercent);
   const instAmt = Number(params.row.InstallmentAmt) || 0;
-  const feePaidAmt =
-    (Number(params.row.AdminFeeAmt) || 0) +
-    (Number(params.row.ProvisionFee) || 0) +
-    (Number(params.row.FiduciaFeeAmt) || 0);
+  const adminFeeAmt = Number(params.row.AdminFeeAmt) || 0;
+  const fiduciaFeeAmt = Number(params.row.FiduciaFeeAmt) || 0;
+  const provisionAmt = provisionAmountOf(params.row, ntfAmt);
+  const feePaidAmt = adminFeeAmt + provisionAmt + fiduciaFeeAmt;
   const totalDownPaymentAmt = Number(params.row.TdpAmt) || downPaymentAmt;
   const balloonAmt = Number(params.row.BalloonAmt) || 0;
   const totalPaymentAmt =
@@ -103,6 +107,8 @@ export function buildSummaryFromProductRow(params: {
     assetInsPaidAmt: 0,
     feePaidAmt,
     balloonAmt,
+    provisionFeePrcnt: provisionPercentOf(params.row, ntfAmt),
+    provisionFeeAmt: provisionAmt,
     firstInstallment: params.firstInstallment,
   };
 }
@@ -175,4 +181,17 @@ export function extractSummaryFromApiLogBody(
   if (!summaryObj) return null;
 
   return mapSummaryInfoToFinalSummary(summaryObj, fallbacks);
+}
+
+export function withProvisionBreakdown(
+  summary: FinalSummaryInfo,
+  provisionPrcnt: number
+): FinalSummaryInfo {
+  const pct = Number.isFinite(provisionPrcnt) ? provisionPrcnt : 0;
+  const amt = Math.round((Number(summary.ntfAmt) || 0) * (pct / 100));
+  return {
+    ...summary,
+    provisionFeePrcnt: pct,
+    provisionFeeAmt: amt,
+  };
 }

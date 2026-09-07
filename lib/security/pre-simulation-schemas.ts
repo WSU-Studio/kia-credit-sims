@@ -17,6 +17,8 @@ export const finalSummarySchema = z.object({
   assetInsPaidAmt: z.number(),
   feePaidAmt: z.number(),
   balloonAmt: z.number().optional(),
+  provisionFeePrcnt: z.number().optional(),
+  provisionFeeAmt: z.number().optional(),
   firstInstallment: z.enum(['ADDM', 'ADDB']).optional(),
 });
 

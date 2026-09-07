@@ -138,6 +138,10 @@ export interface FinalSummaryInfo {
   assetInsPaidAmt: number;
   /** Fee Paid by Customer — SummaryInfoObj.FeePaidAmt */
   feePaidAmt: number;
+  /** Provision % yang di-set salesman (atau nilai API). */
+  provisionFeePrcnt?: number;
+  /** Nominal provision = NTF × provisionFeePrcnt. */
+  provisionFeeAmt?: number;
   /**
    * Sisa pokok besar yang dibayar di akhir tenor (produk Balloon / BL).
    * 0 atau kosong = non-balloon → jangan tampilkan di UI.
