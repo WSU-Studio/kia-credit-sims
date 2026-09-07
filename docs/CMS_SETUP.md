@@ -25,6 +25,16 @@ DATABASE_URL="postgresql://username:password@localhost:5432/kia-credit-sims?sche
 NEXTAUTH_URL="http://localhost:3071"
 NEXTAUTH_SECRET="your-secret-key-here" # Generate dengan: openssl rand -base64 32
 
+# Microsoft 365 SMTP AUTH (client submission) — OTP login dealer/salesman.
+# Server: smtp.office365.com | Port: 587 | STARTTLS required.
+# SMTP AUTH must be enabled on the mailbox in Exchange Online.
+# Tanpa env ini, login dealer gagal di production; di local OTP di-log ke console.
+SMTP_HOST=smtp.office365.com
+SMTP_PORT=587
+SMTP_USER=noreply@email.com
+SMTP_PASS=password
+SMTP_FROM=noreply@email.com
+
 # S3 Media Storage
 AWS_S3_BUCKET="your-bucket-name"
 AWS_REGION="ap-southeast-1"
