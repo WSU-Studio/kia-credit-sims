@@ -7,7 +7,7 @@ import {
   isAbortError,
 } from '@/lib/simulation-client-fetch';
 import { parseCmoSelectKey, type CmoSelectOption } from '@/lib/hyundai-cmo-assign';
-import { ROLE_NAMES } from '@/lib/user-types';
+import { ROLE_NAMES, hasRoleName } from '@/lib/user-types';
 
 export type DealerAssignValue = {
   vendorCode: string;
@@ -57,10 +57,10 @@ export function DealerAssignFields({
   const [cmoLoading, setCmoLoading] = useState(false);
 
   const needsDealer =
-    roleNames.includes(ROLE_NAMES.DEALER_ADMIN) ||
-    roleNames.includes(ROLE_NAMES.SALESMAN);
+    hasRoleName(roleNames, ROLE_NAMES.DEALER_ADMIN) ||
+    hasRoleName(roleNames, ROLE_NAMES.SALESMAN);
 
-  const isSalesman = roleNames.includes(ROLE_NAMES.SALESMAN);
+  const isSalesman = hasRoleName(roleNames, ROLE_NAMES.SALESMAN);
   const selectedCity = value.vendorCity;
   const loading = needsDealer && vendors === null && error === null;
 
@@ -116,7 +116,7 @@ export function DealerAssignFields({
 
   // Daftar Emp Number per vendor (Hyundai: Get List Sales Person).
   useEffect(() => {
-    if (!isSalesman || !dealerSelected) {
+    if (!dealerSelected) {
       setSalesPersons([]);
       return;
     }
@@ -141,7 +141,7 @@ export function DealerAssignFields({
     return () => {
       active = false;
     };
-  }, [isSalesman, dealerSelected, value.vendorCode]);
+  }, [dealerSelected, value.vendorCode]);
 
   // Daftar CMO per vendor (Hyundai: Get Office Member Cmo).
   useEffect(() => {
@@ -276,48 +276,52 @@ export function DealerAssignFields({
         </p>
       )}
 
-      {isSalesman && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label
-              htmlFor="cmoEmpSelect"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Emp Number <span className="text-red-500">*</span>{' '}
-              <span className="text-gray-400 font-normal">(dari dealer)</span>
-            </label>
-            <select
-              id="cmoEmpSelect"
-              value={
-                salesPersons.some((sp) => sp.Key === value.salesEmpNo)
-                  ? value.salesEmpNo
-                  : ''
-              }
-              onChange={(e) => {
-                onChange({ ...value, salesEmpNo: e.target.value });
-                const sp = salesPersons.find((s) => s.Key === e.target.value);
-                if (sp?.Value) onSalesPersonSelect?.(sp.Value);
-              }}
-              disabled={disabled || salesPersonsLoading || !dealerSelected}
-              className="w-full px-3 h-10 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-[#008AEC] focus:border-[#008AEC] disabled:opacity-60"
-            >
-              <option value="">
-                {!dealerSelected
-                  ? 'Pilih dealer dulu'
-                  : salesPersonsLoading
-                    ? 'Memuat...'
-                    : salesPersons.length === 0
-                      ? 'Tidak ada sales person'
-                      : 'Pilih emp number'}
+      <div className={isSalesman ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'grid grid-cols-1 gap-4'}>
+        <div>
+          <label
+            htmlFor="salesEmpSelect"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Emp Number{' '}
+            {isSalesman && <span className="text-red-500">*</span>}{' '}
+            <span className="text-gray-400 font-normal">(dari dealer)</span>
+          </label>
+          <select
+            id="salesEmpSelect"
+            value={
+              salesPersons.some((sp) => sp.Key === value.salesEmpNo)
+                ? value.salesEmpNo
+                : ''
+            }
+            onChange={(e) => {
+              onChange({ ...value, salesEmpNo: e.target.value });
+              const sp = salesPersons.find((s) => s.Key === e.target.value);
+              if (sp?.Value) onSalesPersonSelect?.(sp.Value);
+            }}
+            disabled={disabled || salesPersonsLoading || !dealerSelected}
+            className="w-full px-3 h-10 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-[#008AEC] focus:border-[#008AEC] disabled:opacity-60"
+          >
+            <option value="">
+              {!dealerSelected
+                ? 'Pilih dealer dulu'
+                : salesPersonsLoading
+                  ? 'Memuat...'
+                  : salesPersons.length === 0
+                    ? 'Tidak ada sales person'
+                    : 'Pilih emp number'}
+            </option>
+            {salesPersons.map((sp) => (
+              <option key={sp.Key} value={sp.Key}>
+                {sp.Value} ({sp.Key})
               </option>
-              {salesPersons.map((sp) => (
-                <option key={sp.Key} value={sp.Key}>
-                  {sp.Value} ({sp.Key})
-                </option>
-              ))}
-            </select>
-          </div>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-gray-500">
+            Nomor sales person Hyundai (salesEmpNo). Wajib untuk role Salesman.
+          </p>
+        </div>
 
+        {isSalesman && (
           <div>
             <label htmlFor="cmoEmpNo" className="block text-sm font-medium text-gray-700 mb-1">
               CMO Employee No <span className="text-gray-400 font-normal">(opsional)</span>
@@ -360,8 +364,8 @@ export function DealerAssignFields({
               CMO di halaman leads terkunci ke nomor ini.
             </p>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

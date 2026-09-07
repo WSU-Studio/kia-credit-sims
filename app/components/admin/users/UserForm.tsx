@@ -7,7 +7,7 @@ import {
   DealerAssignFields,
   type DealerAssignValue,
 } from '@/app/components/admin/users/DealerAssignFields';
-import { ROLE_NAMES } from '@/lib/user-types';
+import { ROLE_NAMES, hasRoleName } from '@/lib/user-types';
 
 type Role = {
   id: string;
@@ -117,7 +117,7 @@ export function UserForm({ userId }: UserFormProps) {
     setError('');
 
     if (
-      selectedRoleNames.includes(ROLE_NAMES.SALESMAN) &&
+      hasRoleName(selectedRoleNames, ROLE_NAMES.SALESMAN) &&
       !dealerAssign.salesEmpNo.trim()
     ) {
       setError('Emp Number wajib dipilih untuk user Salesman.');
