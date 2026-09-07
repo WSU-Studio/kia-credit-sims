@@ -9,21 +9,16 @@ export async function verifyPassword(password: string, hashedPassword: string): 
   return bcrypt.compare(password, hashedPassword);
 }
 
-export async function getUserByEmail(email: string) {
-  const user = await prisma.user.findUnique({
-    where: { email },
+const userAuthInclude = {
+  userRoles: {
     include: {
-      userRoles: {
+      role: {
         include: {
-          role: {
+          rolePermissions: {
             include: {
-              rolePermissions: {
+              permission: {
                 include: {
-                  permission: {
-                    include: {
-                      menu: true,
-                    },
-                  },
+                  menu: true,
                 },
               },
             },
@@ -31,9 +26,42 @@ export async function getUserByEmail(email: string) {
         },
       },
     },
-  });
+  },
+} as const;
 
-  return user;
+export async function getUserByEmail(email: string) {
+  return prisma.user.findUnique({
+    where: { email },
+    include: userAuthInclude,
+  });
+}
+
+export async function getUserById(id: string) {
+  return prisma.user.findUnique({
+    where: { id },
+    include: userAuthInclude,
+  });
+}
+
+export type AuthUserRecord = NonNullable<Awaited<ReturnType<typeof getUserByEmail>>>;
+
+export function toNextAuthUser(user: AuthUserRecord, rememberMe: boolean) {
+  const roleNames = user.userRoles.map((ur) => ur.role.name);
+
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    rememberMe,
+    userType: user.userType,
+    roleNames,
+    vendorCode: user.vendorCode,
+    vendorName: user.vendorName,
+    vendorCity: user.vendorCity,
+    oriOfficeCode: user.oriOfficeCode,
+    oriOfficeName: user.oriOfficeName,
+    cmoEmpNo: user.cmoEmpNo,
+  };
 }
 
 
