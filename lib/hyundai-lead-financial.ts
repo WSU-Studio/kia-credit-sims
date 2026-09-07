@@ -4,6 +4,10 @@ import { integrationRequestBody } from '@/lib/hyundai-integration-request';
 import { resolveHyundaiProductFromSimulation } from '@/lib/hyundai-product-map';
 import { resolveIsPartner } from '@/lib/hyundai-partner';
 import type { FinalSummaryInfo } from '@/app/types/credit-simulation';
+import {
+  buildHyundaiFeeRequestFields,
+  type SalesmanFeeOverride,
+} from '@/lib/salesman-fee';
 
 export type HyundaiDefaultProduct = {
   ProductCode: string;
@@ -477,9 +481,12 @@ export async function bootstrapLeadFinancialAndInsurance(params: {
    * ke Lead untuk audit trail. Boleh null kalau dipanggil di context lain.
    */
   leadId?: string | null;
+  /** Override salesman: AdminFeeAmt + ProvisionFee (PRCNT) ke chain finansial Hyundai. */
+  feeOverride?: SalesmanFeeOverride | null;
 }): Promise<FinalSummaryInfo> {
   const logMeta = { leadId: params.leadId ?? null, hyundaiLeadNo: params.leadNo };
   const isPartner = resolveIsPartner({ isPartner: params.isPartner });
+  const feeFields = buildHyundaiFeeRequestFields(params.feeOverride);
   const productsRes = await fetchDefaultProducts(params.leadNo, params.tenor, {
     isPartner,
   });
@@ -512,6 +519,7 @@ export async function bootstrapLeadFinancialAndInsurance(params: {
         ProductCode: product.ProductCode,
         ProductName: product.ProductName,
         IsPromotion: isPromotion,
+        ...feeFields,
       })
     );
   } catch (calcError) {
@@ -534,6 +542,7 @@ export async function bootstrapLeadFinancialAndInsurance(params: {
       IsPromotion: isPromotion,
       FirstInstallment: firstInstallment,
       Tenor: params.tenor,
+      ...feeFields,
     })
   );
 
@@ -558,6 +567,7 @@ export async function bootstrapLeadFinancialAndInsurance(params: {
       dpPrcnt: params.dpPercent,
       isPromotion,
       ...simulateRow,
+      ...feeFields,
     })
   );
 
