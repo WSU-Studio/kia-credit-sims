@@ -250,6 +250,18 @@ export function SimulationSummaryModal({
     doc.text(`${t('summaryInstallmentAmountLabel')}: ${formatRp(summary.instAmt)}`, left, (y += 5));
     doc.text(`${t('summaryAssetInsurancePaidLabel')}: ${formatRp(assetInsurancePaid)}`, left, (y += 5));
     doc.text(`${t('summaryFeePaidByCustomerLabel')}: ${formatRp(feePaidByCustomer)}`, left, (y += 5));
+    if (
+      (summary.provisionFeeAmt != null && summary.provisionFeeAmt > 0) ||
+      (summary.provisionFeePrcnt != null && summary.provisionFeePrcnt > 0)
+    ) {
+      const pct =
+        summary.provisionFeePrcnt != null ? ` (${summary.provisionFeePrcnt}%)` : '';
+      doc.text(
+        `${t('summaryProvisionLabel')}: ${formatRp(summary.provisionFeeAmt ?? 0)}${pct}`,
+        left,
+        (y += 5)
+      );
+    }
     doc.text(`${t('summarySubsidyAmountLabel')}: (${formatRp(subsidyAmt)})`, left, (y += 5));
     doc.text(`${t('summaryTotalDownPaymentLabel')}: ${formatRp(summary.totalDownPaymentAmt)}`, left, (y += 5));
     y += 8;
@@ -426,6 +438,18 @@ export function SimulationSummaryModal({
                   <dd className="font-medium text-gray-900">{formatRp(assetInsurancePaid)}</dd>
                   <dt className="text-gray-500">{t('summaryFeePaidByCustomerLabel')}</dt>
                   <dd className="font-medium text-gray-900">{formatRp(feePaidByCustomer)}</dd>
+                  {(summary.provisionFeeAmt != null && summary.provisionFeeAmt > 0) ||
+                  (summary.provisionFeePrcnt != null && summary.provisionFeePrcnt > 0) ? (
+                    <>
+                      <dt className="text-gray-500">{t('summaryProvisionLabel')}</dt>
+                      <dd className="font-medium text-gray-900">
+                        {formatRp(summary.provisionFeeAmt ?? 0)}
+                        {summary.provisionFeePrcnt != null
+                          ? ` (${summary.provisionFeePrcnt}%)`
+                          : ''}
+                      </dd>
+                    </>
+                  ) : null}
                   <dt className="text-gray-500">{t('summarySubsidyAmountLabel')}</dt>
                   <dd className="font-medium text-gray-900">({formatRp(subsidyAmt)})</dd>
                   <dt className="text-gray-500">{t('summaryTotalDownPaymentLabel')}</dt>
