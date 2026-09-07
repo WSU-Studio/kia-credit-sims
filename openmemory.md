@@ -10,6 +10,7 @@ Fork of `hfci-credit-sims` for Hyundai Capital KIA financing. Engine (LOS Confin
 
 - Next.js App Router + Prisma + NextAuth + next-intl
 - Confins brand filter is centralized in `lib/brand.ts` (`hierarchyLv1Code: KIA`)
+- Salesman fee override (Phase 2 Poin 2): same as HCFI — quotation `/dealer/quotation` stepper admin fee Rp 500.000 + provision 0.5%. Values sent as Confins `AdminFeeAmt` / `ProvisionFee` (`PRCNT`) on CalculateProductFromRule, SimulateFinancialCalculate, and SaveFinancialData. Caps from CMS `maxAdminFeeAmt` / `maxProvisionPrcnt`.
 - Local isolation: port 3071, database `kia-credit-sims`
 - Media/KTP stay on local disk (`MEDIA_STORAGE=local`, `KTP_STORAGE=local`) until KIA infra credentials exist
 - No AWS S3 bucket, RDS, or deploy runners yet — user has not received infrastructure credentials
@@ -28,6 +29,8 @@ Fork of `hfci-credit-sims` for Hyundai Capital KIA financing. Engine (LOS Confin
 - `OtpChallengeForm` + `usePortalLogin` — dealer/salesman email OTP (same as HCFI, KIA ink `#05141f`)
 - SMTP mailer `lib/email.ts` — Office 365 env `SMTP_*`
 - `LoginOtpChallenge` Prisma model
+- `FeeStepper` + `CustomerPaidFees` — stepper fee quotation salesman (same as HCFI)
+- `lib/salesman-fee.ts` — clamp, provision % vs amount, Confins fee request fields
 
 ## Patterns
 
