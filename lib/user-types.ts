@@ -20,13 +20,18 @@ export function isDealerPortalUserType(
   );
 }
 
+export function hasRoleName(roleNames: string[], expected: string): boolean {
+  const needle = expected.trim().toLowerCase();
+  return roleNames.some((name) => name.trim().toLowerCase() === needle);
+}
+
 export function resolveUserTypeFromRoleNames(
   roleNames: string[]
 ): UserType | null {
-  if (roleNames.includes(ROLE_NAMES.SALESMAN)) {
+  if (hasRoleName(roleNames, ROLE_NAMES.SALESMAN)) {
     return USER_TYPES.SALESMAN;
   }
-  if (roleNames.includes(ROLE_NAMES.DEALER_ADMIN)) {
+  if (hasRoleName(roleNames, ROLE_NAMES.DEALER_ADMIN)) {
     return USER_TYPES.DEALER_ADMIN;
   }
   if (roleNames.length > 0) {
