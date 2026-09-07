@@ -9,7 +9,7 @@ import {
 } from '@/app/components/simulation/SimulationSummaryModal';
 import type { FinalSummaryInfo } from '@/app/types/credit-simulation';
 import { parseLeadAssetSnapshot } from '@/lib/lead-asset-snapshot';
-import { parseLeadSummarySnapshot } from '@/lib/lead-summary-snapshot';
+import { parseLeadSummarySnapshot, withProvisionBreakdown } from '@/lib/lead-summary-snapshot';
 import { parseVehicleSummaryParts } from '@/lib/hyundai-asset-resolve';
 import idMessages from '@/messages/id.json';
 
@@ -26,6 +26,8 @@ export type LeadSimulationSummarySource = {
   discount?: number | null;
   dpPercent: number | null;
   tenor: number | null;
+  adminFeeAmtOverride?: number | null;
+  provisionFeeOverride?: number | null;
   vehicleSummary?: string | null;
   assetSnapshot?: unknown;
   summarySnapshot?: unknown;
@@ -134,6 +136,12 @@ export function LeadSimulationSummaryButton({
           firstInstallment,
           isPromotion: Boolean(lead.isPromotion),
           partnerCode: lead.partnerCode ?? undefined,
+          ...(lead.adminFeeAmtOverride != null
+            ? { adminFeeAmt: lead.adminFeeAmtOverride }
+            : {}),
+          ...(lead.provisionFeeOverride != null
+            ? { provisionFee: lead.provisionFeeOverride }
+            : {}),
         }),
       });
       const data = await res.json();
@@ -141,7 +149,10 @@ export function LeadSimulationSummaryButton({
         if (data?.errorId) setErrorId(String(data.errorId));
         throw new Error(data.error || data.message || 'Gagal memuat ringkasan kredit');
       }
-      const next = data.summary as FinalSummaryInfo;
+      const next = withProvisionBreakdown(
+        data.summary as FinalSummaryInfo,
+        Number(lead.provisionFeeOverride) || 0
+      );
       setSummary(next);
       // Simpan di sesi UI; API final-summary juga menulis ke Lead.summarySnapshot.
       setSessionSnapshot(next);

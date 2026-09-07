@@ -36,6 +36,8 @@ type Lead = {
   discount?: number | null;
   dpPercent: number | null;
   tenor: number | null;
+  adminFeeAmtOverride?: number | null;
+  provisionFeeOverride?: number | null;
   ipAddress?: string | null;
   latitude?: number | null;
   longitude?: number | null;
@@ -250,7 +252,7 @@ export function LeadsTable() {
     doc.setFontSize(9);
     doc.text(`Diunduh: ${new Date().toLocaleString('id-ID')}`, 14, 18);
 
-    const headers = ['Tanggal', 'Nama', 'Telepon', 'Email', 'Produk', 'OTR', 'DP %', 'Tenor', 'Lokasi', 'SLIK', 'Status'];
+    const headers = ['Tanggal', 'Nama', 'Telepon', 'Email', 'Produk', 'OTR', 'DP %', 'Provisi %', 'Tenor', 'Lokasi', 'SLIK', 'Status'];
     const rows = leads.map((lead) => {
       const statusOpt = STATUS_OPTIONS.find((s) => s.value === lead.status) || STATUS_OPTIONS[0];
       const location =
@@ -265,6 +267,7 @@ export function LeadsTable() {
         (lead.productName || '-') + (lead.vehicleSummary ? ` (${lead.vehicleSummary})` : ''),
         lead.otrPrice != null ? formatCurrency(lead.otrPrice) : '-',
         lead.dpPercent != null ? String(lead.dpPercent) : '-',
+        lead.provisionFeeOverride != null ? `${lead.provisionFeeOverride}%` : '-',
         lead.tenor != null ? String(lead.tenor) : '-',
         location,
         lead.slikStatus ?? 'NOT_STARTED',
@@ -302,6 +305,7 @@ export function LeadsTable() {
         kendaraan: lead.vehicleSummary ?? '-',
         otr: lead.otrPrice ?? null,
         dpPercent: lead.dpPercent ?? null,
+        provisionPrcnt: lead.provisionFeeOverride ?? null,
         tenor: lead.tenor ?? null,
         lokasi:
           lead.latitude != null && lead.longitude != null
@@ -332,6 +336,7 @@ export function LeadsTable() {
         { header: 'Kendaraan', key: 'kendaraan' },
         { header: 'OTR', key: 'otr' },
         { header: 'DP %', key: 'dpPercent' },
+        { header: 'Provisi %', key: 'provisionPrcnt' },
         { header: 'Tenor (bln)', key: 'tenor' },
         { header: 'Lokasi', key: 'lokasi' },
         { header: 'Dealer', key: 'dealer' },
@@ -564,6 +569,9 @@ export function LeadsTable() {
                           {lead.otrPrice && <div>OTR: {formatCurrency(lead.otrPrice)}</div>}
                           {lead.dpPercent && <div>DP: {lead.dpPercent}%</div>}
                           {lead.tenor && <div>Tenor: {lead.tenor} bln</div>}
+                          {lead.provisionFeeOverride != null && (
+                            <div>Provisi: {lead.provisionFeeOverride}%</div>
+                          )}
                           <LeadSimulationSummaryButton
                             lead={lead}
                             onSummaryCached={(summary) => {
