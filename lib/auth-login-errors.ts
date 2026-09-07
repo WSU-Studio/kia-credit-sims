@@ -4,6 +4,10 @@ export const LOGIN_ERROR_CODES = {
   RATE_LIMITED: 'rate_limited',
   ACCOUNT_LOCKED: 'account_locked',
   ACCOUNT_LOCKED_ADMIN: 'account_locked_admin',
+  OTP_REQUIRED: 'otp_required',
+  OTP_INVALID: 'otp_invalid',
+  OTP_EXPIRED: 'otp_expired',
+  OTP_SEND_FAILED: 'otp_send_failed',
 } as const;
 
 export type LoginErrorCode =
@@ -18,6 +22,13 @@ const LOGIN_ERROR_MESSAGES: Record<LoginErrorCode, string> = {
     'Akun terkunci sementara. Coba lagi nanti atau hubungi admin.',
   [LOGIN_ERROR_CODES.ACCOUNT_LOCKED_ADMIN]:
     'Akun terkunci karena terlalu banyak percobaan login. Hubungi admin untuk membuka kembali.',
+  [LOGIN_ERROR_CODES.OTP_REQUIRED]:
+    'Masukkan kode OTP yang dikirim ke email Anda.',
+  [LOGIN_ERROR_CODES.OTP_INVALID]: 'Kode OTP salah. Silakan coba lagi.',
+  [LOGIN_ERROR_CODES.OTP_EXPIRED]:
+    'Kode OTP kedaluwarsa. Minta kode baru.',
+  [LOGIN_ERROR_CODES.OTP_SEND_FAILED]:
+    'Kode OTP gagal dikirim. Coba lagi beberapa saat.',
 };
 
 export function resolveLoginErrorMessage(
