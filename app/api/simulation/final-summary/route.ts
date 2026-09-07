@@ -6,7 +6,7 @@ import {
   shouldNotUseMockFallback,
   PRODUCTION_DATA_ERROR_MESSAGE,
 } from '@/lib/mock-api';
-import { getMockApiSettings } from '@/lib/site-settings';
+import { getMockApiSettings, getSalesmanFeeCapsFromSettings } from '@/lib/site-settings';
 import {
   extractHyundaiErrorId,
   toUserFacingHyundaiError,
@@ -19,6 +19,10 @@ import {
   finalSummaryBodySchema,
   invalidInputResponse,
 } from '@/lib/security/simulation-schemas';
+import {
+  clampSalesmanFeeOverride,
+  parseSalesmanFeeOverride,
+} from '@/lib/salesman-fee';
 
 function isMockLeadNo(leadNo?: string | null): boolean {
   if (!leadNo) return false;
@@ -108,11 +112,19 @@ export async function POST(request: NextRequest) {
       firstInstallment,
       isPromotion,
       partnerCode,
+      adminFeeAmt,
+      provisionFee,
     } = parsed.data;
     const dpPercent =
       parsed.data.dpPercent != null && Number.isFinite(parsed.data.dpPercent)
         ? parsed.data.dpPercent
         : parsed.data.dpPrcnt!;
+
+    const caps = await getSalesmanFeeCapsFromSettings();
+    const parsedOverride = parseSalesmanFeeOverride({ adminFeeAmt, provisionFee });
+    const feeOverride = parsedOverride
+      ? clampSalesmanFeeOverride(parsedOverride, caps)
+      : null;
 
     const siteMock = await getMockApiSettings();
     const mockEnabled = isMockApiActive(siteMock.enabled);
@@ -143,6 +155,7 @@ export async function POST(request: NextRequest) {
         firstInstallment,
         isPromotion: Boolean(isPromotion),
         isPartner: resolveIsPartner({ partnerCode }),
+        feeOverride,
       });
 
       // Simpan ke Lead agar Ringkasan di admin tidak hit ulang Hyundai.
