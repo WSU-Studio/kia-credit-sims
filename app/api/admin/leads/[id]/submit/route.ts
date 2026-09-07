@@ -157,6 +157,8 @@ export async function POST(
         simulationLeadNo: lead.simulationLeadNo,
         salesEmpNo: lead.salesEmpNo,
         source: lead.source,
+        adminFeeAmtOverride: lead.adminFeeAmtOverride,
+        provisionFeeOverride: lead.provisionFeeOverride,
       },
       vendor,
       cmoEmpNo,

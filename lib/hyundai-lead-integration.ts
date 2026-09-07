@@ -206,6 +206,8 @@ export type LeadRecordForHyundai = {
    * Diisi saat quotation dealer; dipakai ulang saat admin submit cross-office.
    */
   salesEmpNo?: string | null;
+  adminFeeAmtOverride?: number | null;
+  provisionFeeOverride?: number | null;
   /**
    * WEBSITE | DEALER_SALES — dipetakan ke Confins MrChannelCode di AddLeadAsset.
    */
@@ -570,6 +572,18 @@ export async function submitLeadToHyundai(params: {
       isPromotion: params.lead.isPromotion ?? false,
       leadId: params.lead.id,
       isPartner,
+      feeOverride:
+        params.lead.adminFeeAmtOverride != null || params.lead.provisionFeeOverride != null
+          ? {
+              ...(params.lead.adminFeeAmtOverride != null
+                ? { adminFeeAmt: params.lead.adminFeeAmtOverride }
+                : {}),
+              ...(params.lead.provisionFeeOverride != null
+                ? { provisionFee: params.lead.provisionFeeOverride }
+                : {}),
+              provisionType: 'PRCNT',
+            }
+          : null,
     });
   } else {
     flow = 'cross_office';
@@ -647,6 +661,18 @@ export async function submitLeadToHyundai(params: {
       isPromotion: params.lead.isPromotion ?? false,
       leadId: params.lead.id,
       isPartner,
+      feeOverride:
+        params.lead.adminFeeAmtOverride != null || params.lead.provisionFeeOverride != null
+          ? {
+              ...(params.lead.adminFeeAmtOverride != null
+                ? { adminFeeAmt: params.lead.adminFeeAmtOverride }
+                : {}),
+              ...(params.lead.provisionFeeOverride != null
+                ? { provisionFee: params.lead.provisionFeeOverride }
+                : {}),
+              provisionType: 'PRCNT',
+            }
+          : null,
     });
   }
 
