@@ -67,6 +67,12 @@ export const loginLimiter = createLimiter(20, 15 * 60 * 1000);
 /** Login attempts per email — 10 per 15 minutes (botnet-spread defence). */
 export const loginEmailLimiter = createLimiter(10, 15 * 60 * 1000);
 
+/** OTP request/resend per IP — 10 per 15 minutes. */
+export const otpIpLimiter = createLimiter(10, 15 * 60 * 1000);
+
+/** OTP request/resend per email — 5 per 15 minutes. */
+export const otpEmailLimiter = createLimiter(5, 15 * 60 * 1000);
+
 /** Public lead submissions — 10 per minute per IP. */
 export const leadsLimiter = createLimiter(10, 60 * 1000);
 
