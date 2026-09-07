@@ -191,15 +191,18 @@ function buildProductRow(
   tenor: number,
   product: (typeof STANDARD_PRODUCTS)[number],
   firstInstallment: 'ADDM' | 'ADDB',
-  effRateOverride?: number
+  effRateOverride?: number,
+  fees?: { adminFeeAmt?: number; provisionFee?: number }
 ): ProductCalculation {
   const dpAmt = Math.round(otrPrice * (dpPct / 100));
   const loanAmount = otrPrice - dpAmt;
   const rate = effRateOverride ?? product.effRate;
   const inst = annuityInstallment(loanAmount, rate / 100, tenor);
-  const prov = Math.round(loanAmount * (PROVISION_PCT / 100));
+  const adminFee = Number.isFinite(fees?.adminFeeAmt) ? Number(fees?.adminFeeAmt) : ADMIN_FEE;
+  const provisionPct = Number.isFinite(fees?.provisionFee) ? Number(fees?.provisionFee) : PROVISION_PCT;
+  const prov = Math.round(loanAmount * (provisionPct / 100));
 
-  let tdp = dpAmt + ADMIN_FEE + prov + FIDUCIA_FEE;
+  let tdp = dpAmt + adminFee + prov + FIDUCIA_FEE;
   if (firstInstallment === 'ADDM') {
     tdp += Math.round(inst); // first installment di muka
   }
@@ -220,11 +223,11 @@ function buildProductRow(
     BalloonAmt: product.isBalloon ? Math.round(loanAmount * 0.6) : 0,
     DefermentPeriod: 0,
     DefermentRatePrcnt: 0,
-    AdminFeeAmt: ADMIN_FEE,
+    AdminFeeAmt: adminFee,
     AdminFeeCptlz: false,
     AdminFeeBhv: 'DEF',
     ProvisionType: 'PRCNT',
-    ProvisionFee: PROVISION_PCT,
+    ProvisionFee: provisionPct,
     ProvisionFeeCptlz: false,
     ProvisionFeeBhv: 'DEF',
     FiduciaFeeAmt: FIDUCIA_FEE,
@@ -280,6 +283,8 @@ function computeProductRows(params: {
   productCode: string;
   productName: string;
   firstInstallment?: 'ADDM' | 'ADDB';
+  adminFeeAmt?: number;
+  provisionFee?: number;
 }): ProductCalculation[] {
   const product = STANDARD_PRODUCTS.find(
     (p) => p.ProductName === params.productName && p.ProductCode === params.productCode
@@ -290,7 +295,12 @@ function computeProductRows(params: {
   const tenors = product.is5050 ? ([12] as const) : TENORS;
   const installments = supportedFirstInstallments(product);
   return installments.flatMap((fi) =>
-    tenors.map((t) => buildProductRow(params.otrPrice, params.dpPrcnt, t, product, fi))
+    tenors.map((t) =>
+      buildProductRow(params.otrPrice, params.dpPrcnt, t, product, fi, undefined, {
+        adminFeeAmt: params.adminFeeAmt,
+        provisionFee: params.provisionFee,
+      })
+    )
   );
 }
 
@@ -531,6 +541,8 @@ export const mockApi = {
     productCode: string;
     productName: string;
     firstInstallment?: 'ADDM' | 'ADDB';
+    adminFeeAmt?: number;
+    provisionFee?: number;
   }): { ListProductObj: ProductCalculation[] } {
     const rows = computeProductRows(params);
     return { ListProductObj: rows };
