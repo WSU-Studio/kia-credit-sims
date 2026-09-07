@@ -13,13 +13,23 @@ import {
 } from '@/app/components/simulation/SimulationSummaryModal';
 import { ContactModal, type UserLocation } from '@/app/components/simulation/ContactModal';
 import { SimulationRetryError } from '@/app/components/simulation/SimulationRetryError';
-import { buildSummaryFromProductRow } from '@/lib/lead-summary-snapshot';
+import { CustomerPaidFees } from '@/app/components/simulation/CustomerPaidFees';
+import { buildSummaryFromProductRow, withProvisionBreakdown } from '@/lib/lead-summary-snapshot';
 import {
   getAvailableFirstInstallments,
   normalizeFirstInstallment,
   pickAllowedFirstInstallment,
   type FirstInstallmentType,
 } from '@/lib/product-calculation-rows';
+import {
+  DEFAULT_MAX_ADMIN_FEE_AMT,
+  DEFAULT_MAX_PROVISION_PRCNT,
+  ntfFromAsset,
+  parseSalesmanFeeCaps,
+  provisionAmountOf,
+  provisionPercentOf,
+  type SalesmanFeeCaps,
+} from '@/lib/salesman-fee';
 import Link from 'next/link';
 
 type TabKind = 'Standard' | 'Promotion';
@@ -137,6 +147,13 @@ export function ResultStep({
   const [finalSummaryError, setFinalSummaryError] = useState<string | null>(null);
   const [finalSummaryErrorId, setFinalSummaryErrorId] = useState<string | null>(null);
   const [finalSummaryCacheKey, setFinalSummaryCacheKey] = useState<string | null>(null);
+  const [feeCaps, setFeeCaps] = useState<SalesmanFeeCaps>({
+    maxAdminFeeAmt: DEFAULT_MAX_ADMIN_FEE_AMT,
+    maxProvisionPrcnt: DEFAULT_MAX_PROVISION_PRCNT,
+  });
+  const [adminFeeAmt, setAdminFeeAmt] = useState<number>(0);
+  const [provisionPrcnt, setProvisionPrcnt] = useState<number>(0);
+  const feeTouchedRef = useRef(false);
   const fetchListGeneration = useRef(0);
   // Counter + abort controller untuk drop stale response saat user ubah
   // DP%/firstInstallment cepat (race condition: tabel bisa nampilkan data dari
@@ -194,6 +211,7 @@ export function ResultStep({
         if (digits.startsWith('0')) digits = '62' + digits.slice(1);
         else if (!digits.startsWith('62')) digits = '62' + digits;
         setWhatsappLeadPhone(digits || '628111500708');
+        setFeeCaps(parseSalesmanFeeCaps(data));
       })
       .catch(() => setWhatsappLeadPhone('628111500708'));
   }, []);
@@ -237,6 +255,16 @@ export function ResultStep({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [firstInstallment, selectedProduct?.ProductCode, selectedProduct?.ProductName, dpPercent, isPromotion]);
 
+  useEffect(() => {
+    if (!isDealerSales || !feeTouchedRef.current) return;
+    if (!selectedProduct || !otrPrice || !selectedProduct.ProductCode) return;
+    const timer = setTimeout(() => {
+      handleCalculate();
+    }, 150);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adminFeeAmt, provisionPrcnt]);
+
   // Bersihin in-flight request kalau komponen unmount.
   useEffect(() => {
     return () => {
@@ -255,6 +283,8 @@ export function ResultStep({
       highlightedRow.Tenor,
       firstInstallment,
       isPromotion ? '1' : '0',
+      isDealerSales && feeTouchedRef.current ? String(adminFeeAmt) : '-',
+      isDealerSales && feeTouchedRef.current ? String(provisionPrcnt) : '-',
     ].join('|');
   };
 
@@ -292,6 +322,9 @@ export function ResultStep({
           firstInstallment,
           isPromotion,
           partnerCode,
+          ...(isDealerSales && feeTouchedRef.current
+            ? { adminFeeAmt, provisionFee: provisionPrcnt }
+            : {}),
         }),
         signal: controller.signal,
       });
@@ -304,10 +337,15 @@ export function ResultStep({
       const summary = data.summary as FinalSummaryInfo;
       const rowBalloon = Number(highlightedRow?.BalloonAmt) || 0;
       const summaryBalloon = Number(summary.balloonAmt) || 0;
-      setFinalSummary({
-        ...summary,
-        balloonAmt: summaryBalloon > 0 ? summaryBalloon : rowBalloon > 0 ? rowBalloon : 0,
-      });
+      setFinalSummary(
+        withProvisionBreakdown(
+          {
+            ...summary,
+            balloonAmt: summaryBalloon > 0 ? summaryBalloon : rowBalloon > 0 ? rowBalloon : 0,
+          },
+          provisionPrcnt
+        )
+      );
       setFinalSummaryAt(new Date().toISOString());
       setFinalSummaryCacheKey(cacheKey);
     } catch (e) {
@@ -348,6 +386,9 @@ export function ResultStep({
           firstInstallment,
           isPromotion,
           partnerCode,
+          ...(isDealerSales && feeTouchedRef.current
+            ? { adminFeeAmt, provisionFee: provisionPrcnt }
+            : {}),
         }),
       });
       const data = await res.json();
@@ -364,11 +405,14 @@ export function ResultStep({
         tenor: highlightedRow.Tenor,
         firstInstallment,
         isPromotion,
-        summary: {
-          ...summary,
-          balloonAmt: summaryBalloon > 0 ? summaryBalloon : rowBalloon > 0 ? rowBalloon : 0,
-          firstInstallment,
-        },
+        summary: withProvisionBreakdown(
+          {
+            ...summary,
+            balloonAmt: summaryBalloon > 0 ? summaryBalloon : rowBalloon > 0 ? rowBalloon : 0,
+            firstInstallment,
+          },
+          provisionPrcnt
+        ),
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : t('summaryErrorFinal'));
@@ -480,6 +524,9 @@ export function ResultStep({
           firstInstallment,
           isPromotion,
           partnerCode,
+          ...(isDealerSales && feeTouchedRef.current
+            ? { adminFeeAmt, provisionFee: provisionPrcnt }
+            : {}),
         }),
         signal: controller.signal,
       });
@@ -510,6 +557,12 @@ export function ResultStep({
       const row36 = rows.find((r) => r.Tenor === 36);
       const first = rows[0];
       setSelectedTenor(row36?.Tenor ?? first?.Tenor ?? 36);
+      const seedRow = row36 ?? first;
+      if (seedRow && !feeTouchedRef.current) {
+        const ntf = ntfFromAsset(Number(otrPrice) || 0, dpPercent);
+        setAdminFeeAmt(Number(seedRow.AdminFeeAmt) || 0);
+        setProvisionPrcnt(Math.round(provisionPercentOf(seedRow, ntf) * 2) / 2);
+      }
     } catch (e) {
       // AbortError dari controller.abort() bukan error sungguhan — skip diam-diam.
       if (e instanceof DOMException && e.name === 'AbortError') return;
@@ -526,6 +579,9 @@ export function ResultStep({
   };
 
   const selectProduct = (product: ProductCalculation) => {
+    feeTouchedRef.current = false;
+    setAdminFeeAmt(Number(product.AdminFeeAmt) || 0);
+    setProvisionPrcnt(Number(product.ProvisionFee) || 0);
     setSelectedProduct(product);
     setDpPercent(resolveDefaultDpPercent(product));
     const preferred =
@@ -748,6 +804,38 @@ export function ResultStep({
                   : t('addmAddbHint')}
             </p>
           </div>
+
+          {isDealerSales && selectedProduct && (
+            <CustomerPaidFees
+              editable
+              adminFeeAmt={adminFeeAmt}
+              provisionPrcnt={provisionPrcnt}
+              provisionAmt={provisionAmountOf(
+                { ProvisionFee: provisionPrcnt, ProvisionType: 'PRCNT' },
+                ntfFromAsset(Number(otrPrice) || 0, dpPercent)
+              )}
+              showProvision
+              caps={feeCaps}
+              disabled={simulateLoading}
+              onAdminFeeChange={(next) => {
+                feeTouchedRef.current = true;
+                setAdminFeeAmt(next);
+              }}
+              onProvisionPrcntChange={(next) => {
+                feeTouchedRef.current = true;
+                setProvisionPrcnt(next);
+              }}
+              formatCurrency={formatCurrency}
+              labels={{
+                sectionTitle: t('customerPaidFeesTitle'),
+                adminFee: t('adminFeeLabel'),
+                adminFeeHint: t('adminFeeHint'),
+                provision: t('provisionFeeLabel'),
+                provisionHint: t('provisionFeeHint'),
+                provisionAmount: t('provisionAmountLabel'),
+              }}
+            />
+          )}
 
           {/* <button
             type="button"
@@ -1016,6 +1104,8 @@ export function ResultStep({
                 discount={discount}
                 dpPercent={dpPercent}
                 tenor={highlightedRow?.Tenor}
+                adminFeeAmtOverride={isDealerSales ? adminFeeAmt : null}
+                provisionFeeOverride={isDealerSales ? provisionPrcnt : null}
                 vehicleSummary={
                   vehicle
                     ? [vehicle.modelName, vehicle.trimName, vehicle.exteriorColor, vehicle.interiorColor]
@@ -1027,16 +1117,19 @@ export function ResultStep({
                 summarySnapshot={
                   finalSummary ??
                   (selectedProduct && highlightedRow && otrPrice
-                    ? buildSummaryFromProductRow({
-                        productName: selectedProduct.ProductName,
-                        productCode: selectedProduct.ProductCode,
-                        otrPrice,
-                        discount,
-                        dpPercent,
-                        tenor: highlightedRow.Tenor,
-                        firstInstallment,
-                        row: highlightedRow,
-                      })
+                    ? withProvisionBreakdown(
+                        buildSummaryFromProductRow({
+                          productName: selectedProduct.ProductName,
+                          productCode: selectedProduct.ProductCode,
+                          otrPrice,
+                          discount,
+                          dpPercent,
+                          tenor: highlightedRow.Tenor,
+                          firstInstallment,
+                          row: highlightedRow,
+                        }),
+                        provisionPrcnt
+                      )
                     : null)
                 }
                 onSubmit={() => {

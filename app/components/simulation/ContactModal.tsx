@@ -48,6 +48,8 @@ interface ContactModalProps {
   leadSource?: LeadSource;
   /** Snapshot ringkasan kredit (FinalSummaryInfo) — disimpan ke Lead.summarySnapshot. */
   summarySnapshot?: FinalSummaryInfo | null;
+  adminFeeAmtOverride?: number | null;
+  provisionFeeOverride?: number | null;
   onSubmit?: (data: { name: string; phone: string; email: string }) => void;
 }
 
@@ -69,6 +71,8 @@ export function ContactModal({
   userLocation,
   leadSource = LEAD_SOURCES.WEBSITE,
   summarySnapshot,
+  adminFeeAmtOverride = null,
+  provisionFeeOverride = null,
   onSubmit,
 }: ContactModalProps) {
   const t = useTranslations('creditSimulation');
@@ -441,6 +445,8 @@ export function ContactModal({
           discount: discount != null && discount > 0 ? discount : null,
           dpPercent: dpPercent || null,
           tenor: tenor || null,
+          adminFeeAmtOverride,
+          provisionFeeOverride,
           fastTrack,
           ...scoringPayload,
           consentAccepted: consent,
