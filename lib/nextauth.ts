@@ -1,8 +1,15 @@
 import { CredentialsSignin } from '@auth/core/errors';
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
-import { getUserByEmail, verifyPassword } from '@/lib/auth';
+import {
+  getUserByEmail,
+  getUserById,
+  toNextAuthUser,
+  verifyPassword,
+} from '@/lib/auth';
+import { dealerRequiresEmailOtp } from '@/lib/auth-otp';
 import { LOGIN_ERROR_CODES } from '@/lib/auth-login-errors';
+import { consumeLoginOtpChallenge } from '@/lib/login-otp';
 import { loginEmailLimiter } from '@/lib/ratelimit';
 import {
   readLockState,
@@ -30,8 +37,37 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
         rememberMe: { label: 'Remember me', type: 'text' },
+        challengeId: { label: 'OTP challenge', type: 'text' },
+        otp: { label: 'OTP', type: 'text' },
       },
       async authorize(credentials) {
+        const challengeId =
+          typeof credentials?.challengeId === 'string'
+            ? credentials.challengeId.trim()
+            : '';
+        const otp =
+          typeof credentials?.otp === 'string' ? credentials.otp.trim() : '';
+
+        if (challengeId && otp) {
+          const consumed = await consumeLoginOtpChallenge({ challengeId, otp });
+          if (consumed.ok === false) {
+            rejectLogin(consumed.code);
+          } else {
+            const user = await getUserById(consumed.userId);
+            if (!user || !user.isActive || !dealerRequiresEmailOtp(user.userType)) {
+              return null;
+            }
+
+            const otpLockState = readLockState(user);
+            if (otpLockState.locked) {
+              rejectLogin(LOGIN_ERROR_CODES.CREDENTIALS);
+            }
+
+            await recordSuccessfulLogin(user.id);
+            return toNextAuthUser(user, consumed.rememberMe);
+          }
+        }
+
         if (!credentials?.email || !credentials?.password) {
           rejectLogin(LOGIN_ERROR_CODES.MISSING_FIELDS);
         }
@@ -70,27 +106,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
+        if (dealerRequiresEmailOtp(user.userType)) {
+          rejectLogin(LOGIN_ERROR_CODES.OTP_REQUIRED);
+        }
+
         await recordSuccessfulLogin(user.id);
 
         const rememberMe =
           credentials.rememberMe === true || credentials.rememberMe === 'true';
 
-        const roleNames = user.userRoles.map((ur) => ur.role.name);
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          rememberMe,
-          userType: user.userType,
-          roleNames,
-          vendorCode: user.vendorCode,
-          vendorName: user.vendorName,
-          vendorCity: user.vendorCity,
-          oriOfficeCode: user.oriOfficeCode,
-          oriOfficeName: user.oriOfficeName,
-          cmoEmpNo: user.cmoEmpNo,
-        };
+        return toNextAuthUser(user, rememberMe);
       },
     }),
   ],
