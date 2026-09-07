@@ -418,6 +418,10 @@ model Lead {
   discount            Float? // Potongan harga (nominal)
   partnerCode         String? // Kode partner Hyundai (opsional, dari PriceStep)
   dpPercent           Float?
+  /// Override salesman vs rule Hyundai (`AdminFeeAmt`). Null = pakai nilai API.
+  adminFeeAmtOverride Float?
+  /// Override salesman vs rule Hyundai (`ProvisionFee` persen). Null = pakai nilai API.
+  provisionFeeOverride Float?
   tenor               Int?
   notes               String?   @db.Text
   ktpUrl              String? // URL gambar KTP yang diupload
