@@ -25,8 +25,12 @@ Fork of `hfci-credit-sims` for Hyundai Capital KIA financing. Engine (LOS Confin
 - `lib/brand.ts` — KIA Confins brand code, slug, theme tokens, master dealer env
 - Simulation APIs (`app/api/simulation/assets`, `lead-asset`) send `AssetHierarchyLv1Code` / `AssetLv1Code` from `BRAND`
 - Vendor list body uses `SupplierBrandCode` from `BRAND.hierarchyLv1Code`
+- `OtpChallengeForm` + `usePortalLogin` — dealer/salesman email OTP (same as HCFI, KIA ink `#05141f`)
+- SMTP mailer `lib/email.ts` — Office 365 env `SMTP_*`
+- `LoginOtpChallenge` Prisma model
 
 ## Patterns
 
 - Interim public theme from kia.id: white + `#05141f`, logo as `KiaLogo` component (`currentColor`)
 - Official homepage guidelines still pending; current chrome is an adaptation of existing components
+- Dealer/salesman login: password then email OTP. Admin CMS skips OTP. Local without SMTP logs the code to the server console.
