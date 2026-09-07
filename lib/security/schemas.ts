@@ -230,6 +230,26 @@ export const leadCreateSchema = z
     discount: z.coerce.number().nonnegative().optional(),
     dpPercent: requiredFiniteNumber({ min: 0, max: 100, label: 'DP %' }),
     tenor: requiredFiniteNumber({ min: 1, max: 120, integer: true, label: 'tenor' }),
+    adminFeeAmtOverride: z
+      .union([z.number(), z.string(), z.null(), z.undefined()])
+      .transform((v) => {
+        if (v === '' || v == null) return null;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : null;
+      })
+      .refine((v) => v == null || v >= 0, { message: 'AdminFeeAmt minimal 0' })
+      .refine((v) => v == null || v <= 50_000_000, { message: 'AdminFeeAmt terlalu besar' })
+      .optional(),
+    provisionFeeOverride: z
+      .union([z.number(), z.string(), z.null(), z.undefined()])
+      .transform((v) => {
+        if (v === '' || v == null) return null;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : null;
+      })
+      .refine((v) => v == null || v >= 0, { message: 'ProvisionFee minimal 0' })
+      .refine((v) => v == null || v <= 30, { message: 'ProvisionFee maksimal 30' })
+      .optional(),
 
     /** true = user minta Fast Track → scoring fields wajib. */
     fastTrack: z.boolean().optional().default(false),

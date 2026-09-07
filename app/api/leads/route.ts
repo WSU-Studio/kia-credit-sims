@@ -179,6 +179,14 @@ export async function POST(request: NextRequest) {
       partnerCode: draft.partnerCode ?? null,
       dpPercent: data.dpPercent,
       tenor: data.tenor != null ? Math.trunc(data.tenor) : null,
+      adminFeeAmtOverride:
+        data.adminFeeAmtOverride != null && Number.isFinite(data.adminFeeAmtOverride)
+          ? data.adminFeeAmtOverride
+          : null,
+      provisionFeeOverride:
+        data.provisionFeeOverride != null && Number.isFinite(data.provisionFeeOverride)
+          ? data.provisionFeeOverride
+          : null,
       ktpUrl: data.ktpUrl ?? null,
       ocrSnapshot:
         data.ocrSnapshot && typeof data.ocrSnapshot === 'object'
