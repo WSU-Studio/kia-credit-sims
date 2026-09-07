@@ -134,6 +134,22 @@ export const siteSettingsWriteSchema = z
     homeProductSectionTitleEn: optionalSafeText(MAX_SETTING_TEXT).transform((v) => v ?? ''),
     homeArticlesTitle: optionalSafeText(MAX_SETTING_TEXT).transform((v) => v ?? ''),
     homeArticlesTitleEn: optionalSafeText(MAX_SETTING_TEXT).transform((v) => v ?? ''),
+    maxAdminFeeAmt: z
+      .union([z.string(), z.number(), z.null(), z.undefined()])
+      .transform((v) => {
+        if (v == null || v === '') return '9000000';
+        const n = Number(String(v).replace(/[^\d.]/g, ''));
+        if (!Number.isFinite(n) || n < 0) return '9000000';
+        return String(Math.round(Math.min(50_000_000, n)));
+      }),
+    maxProvisionPrcnt: z
+      .union([z.string(), z.number(), z.null(), z.undefined()])
+      .transform((v) => {
+        if (v == null || v === '') return '9';
+        const n = Number(String(v).replace(/[^\d.]/g, ''));
+        if (!Number.isFinite(n) || n < 0) return '9';
+        return String(Math.min(30, Math.round(n * 2) / 2));
+      }),
   })
   .strip();
 

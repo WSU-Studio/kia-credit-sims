@@ -31,6 +31,8 @@ const KEYS = [
   'homeProductSectionTitleEn',
   'homeArticlesTitle',
   'homeArticlesTitleEn',
+  'maxAdminFeeAmt',
+  'maxProvisionPrcnt',
 ] as const;
 
 function toPayload(settings: { key: string; value: string }[]) {

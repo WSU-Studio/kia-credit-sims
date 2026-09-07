@@ -1,4 +1,5 @@
 import { prisma } from './prisma';
+import { parseSalesmanFeeCaps, type SalesmanFeeCaps } from '@/lib/salesman-fee';
 
 export type SiteSettingsPublic = {
   gtmId: string;
@@ -25,6 +26,10 @@ export type SiteSettingsPublic = {
   homeProductSectionTitleEn: string;
   homeArticlesTitle: string;
   homeArticlesTitleEn: string;
+  /** Cap stepper admin fee quotation salesman (nominal, default 9000000). */
+  maxAdminFeeAmt: string;
+  /** Cap stepper provision % quotation salesman (default 9). */
+  maxProvisionPrcnt: string;
 };
 
 export type MockApiSettings = {
@@ -57,6 +62,8 @@ const DEFAULT: SiteSettingsPublic = {
   homeProductSectionTitleEn: '',
   homeArticlesTitle: '',
   homeArticlesTitleEn: '',
+  maxAdminFeeAmt: '9000000',
+  maxProvisionPrcnt: '9',
 };
 
 /**
@@ -128,6 +135,8 @@ export async function getSiteSettings(): Promise<SiteSettingsPublic> {
             'homeProductSectionTitleEn',
             'homeArticlesTitle',
             'homeArticlesTitleEn',
+            'maxAdminFeeAmt',
+            'maxProvisionPrcnt',
           ],
         },
       },
@@ -140,4 +149,9 @@ export async function getSiteSettings(): Promise<SiteSettingsPublic> {
   } catch {
     return DEFAULT;
   }
+}
+
+export async function getSalesmanFeeCapsFromSettings(): Promise<SalesmanFeeCaps> {
+  const settings = await getSiteSettings();
+  return parseSalesmanFeeCaps(settings);
 }

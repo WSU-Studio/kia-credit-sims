@@ -27,6 +27,8 @@ type SiteSettingsData = {
   homeProductSectionTitleEn: string;
   homeArticlesTitle: string;
   homeArticlesTitleEn: string;
+  maxAdminFeeAmt: string;
+  maxProvisionPrcnt: string;
 };
 
 const defaultData: SiteSettingsData = {
@@ -52,6 +54,8 @@ const defaultData: SiteSettingsData = {
   homeProductSectionTitleEn: '',
   homeArticlesTitle: '',
   homeArticlesTitleEn: '',
+  maxAdminFeeAmt: '9000000',
+  maxProvisionPrcnt: '9',
 };
 
 function ensureString(v: unknown): string {
@@ -94,6 +98,8 @@ export function SiteSettings() {
             homeProductSectionTitleEn: ensureString(d.homeProductSectionTitleEn ?? ''),
             homeArticlesTitle: ensureString(d.homeArticlesTitle ?? ''),
             homeArticlesTitleEn: ensureString(d.homeArticlesTitleEn ?? ''),
+            maxAdminFeeAmt: ensureString(d.maxAdminFeeAmt ?? '9000000'),
+            maxProvisionPrcnt: ensureString(d.maxProvisionPrcnt ?? '9'),
           });
         }
         setLoading(false);
@@ -134,6 +140,8 @@ export function SiteSettings() {
           homeProductSectionTitleEn: data.homeProductSectionTitleEn.trim(),
           homeArticlesTitle: data.homeArticlesTitle.trim(),
           homeArticlesTitleEn: data.homeArticlesTitleEn.trim(),
+          maxAdminFeeAmt: data.maxAdminFeeAmt.trim(),
+          maxProvisionPrcnt: data.maxProvisionPrcnt.trim(),
         }),
       });
       const json = await res.json();
@@ -476,6 +484,47 @@ export function SiteSettings() {
             </div>
           </div>
 
+        </div>
+      </section>
+
+      {/* Cap fee quotation salesman */}
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">
+          Fee Quotation Salesman
+        </h2>
+        <p className="text-sm text-gray-600">
+          Batas stepper di quotation dealer. Admin fee kelipatan Rp 500.000 (default maks. Rp 9.000.000). Provision kelipatan 0,5% (default maks. 9%). Salesman tidak boleh melebihi nilai ini.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Maks. admin fee (Rp)
+            </label>
+            <input
+              type="number"
+              min={0}
+              step={500000}
+              value={data.maxAdminFeeAmt}
+              onChange={(e) => setData({ ...data, maxAdminFeeAmt: e.target.value })}
+              className="w-full px-3 h-10 border border-gray-300 rounded-lg text-gray-700 text-sm focus:ring-2 focus:ring-[#002c5f] focus:border-[#002c5f]"
+              placeholder="9000000"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Maks. provision (%)
+            </label>
+            <input
+              type="number"
+              min={0}
+              max={30}
+              step={0.5}
+              value={data.maxProvisionPrcnt}
+              onChange={(e) => setData({ ...data, maxProvisionPrcnt: e.target.value })}
+              className="w-full px-3 h-10 border border-gray-300 rounded-lg text-gray-700 text-sm focus:ring-2 focus:ring-[#002c5f] focus:border-[#002c5f]"
+              placeholder="9"
+            />
+          </div>
         </div>
       </section>
 

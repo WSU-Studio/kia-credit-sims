@@ -33,6 +33,8 @@ export async function GET() {
         homeProductSectionTitleEn: '',
         homeArticlesTitle: '',
         homeArticlesTitleEn: '',
+        maxAdminFeeAmt: '9000000',
+        maxProvisionPrcnt: '9',
       },
       { status: 200 }
     );
