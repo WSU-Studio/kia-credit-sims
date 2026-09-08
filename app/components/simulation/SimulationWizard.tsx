@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { IconCheck, IconX } from '@tabler/icons-react';
 import type { UserLocation } from '@/app/components/simulation/ContactModal';
@@ -20,8 +20,16 @@ import {
   formatStepOf,
   type SimulationWizardLabels,
 } from '@/lib/simulation-wizard-labels';
+import type {
+  PromoLandingHydration,
+  PromoResultSelection,
+} from '@/lib/promo-simulation';
 
-export type SimulationMode = 'public' | 'dealer-sales' | 'pre-simulation';
+export type SimulationMode =
+  | 'public'
+  | 'dealer-sales'
+  | 'pre-simulation'
+  | 'promo-landing';
 
 type StepKey = 'dealer' | 'model' | 'spec' | 'price' | 'result';
 
@@ -48,6 +56,9 @@ export type SimulationWizardProps = {
   initialDealer?: Vendor | null;
   leadSource?: LeadSource;
   embedded?: boolean;
+  /** Banner / live promo — hydrate wizard ke ResultStep tanpa snapshot mati. */
+  hydration?: PromoLandingHydration | null;
+  resultSelection?: PromoResultSelection | null;
   /** Admin pre-simulasi — dipanggil setelah user pilih produk + ringkasan siap. */
   onCapturePreSimulation?: (data: {
     productCode: string;
@@ -83,21 +94,28 @@ export function SimulationWizard({
   initialDealer = null,
   leadSource = LEAD_SOURCES.WEBSITE,
   embedded = false,
+  hydration = null,
+  resultSelection = null,
   onCapturePreSimulation,
 }: SimulationWizardProps) {
   const t = useTranslations('creditSimulation');
   const isDealerSales = mode === 'dealer-sales';
   const isPreSimulation = mode === 'pre-simulation';
+  const isPromoLanding = mode === 'promo-landing';
   const steps = isDealerSales ? DEALER_STEPS : PUBLIC_STEPS;
+  const [hydrationActive, setHydrationActive] = useState(() => !!hydration);
+  const promoLeadRequestedRef = useRef(false);
 
   const [currentStepKey, setCurrentStepKey] = useState<StepKey>(
-    isDealerSales ? 'model' : 'dealer'
+    hydration ? 'result' : isDealerSales ? 'model' : 'dealer'
   );
   const [selectedDealer, setSelectedDealer] = useState<Vendor | null>(
-    isDealerSales ? initialDealer : null
+    hydration?.dealer ?? (isDealerSales ? initialDealer : null)
   );
   const [dealerSelectNotice, setDealerSelectNotice] = useState<string | null>(null);
-  const [selectedAsset, setSelectedAsset] = useState<AssetMaster | null>(null);
+  const [selectedAsset, setSelectedAsset] = useState<AssetMaster | null>(
+    hydration?.asset ?? null
+  );
   const [specs, setSpecs] = useState<{
     manufacturingYear?: number;
     fscCode?: string;
@@ -107,10 +125,14 @@ export function SimulationWizard({
     exteriorColorName?: string;
     interiorColorCode?: string;
     interiorColorName?: string;
-  }>({});
-  const [otrPrice, setOtrPrice] = useState<number | null>(null);
-  const [discount, setDiscount] = useState<number>(0);
-  const [partnerCode, setPartnerCode] = useState<string | null>(null);
+  }>(hydration?.specs ?? {});
+  const [otrPrice, setOtrPrice] = useState<number | null>(
+    hydration?.otrPrice ?? null
+  );
+  const [discount, setDiscount] = useState<number>(hydration?.discount ?? 0);
+  const [partnerCode, setPartnerCode] = useState<string | null>(
+    hydration?.partnerCode ?? null
+  );
   const [leadNo, setLeadNo] = useState<string | null>(null);
   const [leadNoLoading, setLeadNoLoading] = useState(false);
   const [leadNoError, setLeadNoError] = useState<string | null>(null);
@@ -167,6 +189,7 @@ export function SimulationWizard({
   };
 
   const handleDealerSelect = (dealer: Vendor) => {
+    setHydrationActive(false);
     setSelectedDealer(dealer);
     setDealerSelectNotice(
       t('dealerSelectSuccess', { dealerName: dealer.VendorName })
@@ -176,6 +199,8 @@ export function SimulationWizard({
   };
 
   const handleRestart = useCallback(() => {
+    setHydrationActive(false);
+    promoLeadRequestedRef.current = true;
     setSelectedAsset(null);
     setSpecs({});
     setOtrPrice(null);
@@ -196,6 +221,7 @@ export function SimulationWizard({
   }, [isDealerSales, initialDealer]);
 
   const handleAssetSelect = (asset: AssetMaster) => {
+    setHydrationActive(false);
     setSelectedAsset(asset);
     setCurrentStepKey('spec');
     resetFromStep('spec');
@@ -211,6 +237,7 @@ export function SimulationWizard({
     interiorColorCode: string;
     interiorColorName: string;
   }) => {
+    setHydrationActive(false);
     setSpecs(completedSpecs);
     setCurrentStepKey('price');
     resetFromStep('price');
@@ -320,6 +347,29 @@ export function SimulationWizard({
     });
   }, [otrPrice, discount, partnerCode, requestLeadAsset]);
 
+  useEffect(() => {
+    if (!isPromoLanding || !hydrationActive) return;
+    if (promoLeadRequestedRef.current) return;
+    if (currentStepKey !== 'result' || otrPrice == null) return;
+    if (!selectedDealer || !selectedAsset) return;
+    promoLeadRequestedRef.current = true;
+    void requestLeadAsset({
+      netPrice: otrPrice,
+      discountAmount: discount,
+      partnerCode,
+    });
+  }, [
+    isPromoLanding,
+    hydrationActive,
+    currentStepKey,
+    otrPrice,
+    discount,
+    partnerCode,
+    selectedDealer,
+    selectedAsset,
+    requestLeadAsset,
+  ]);
+
   const leadAssetSnapshot: LeadAssetSnapshot | null = selectedAsset
     ? buildLeadAssetSnapshot(selectedAsset, specs)
     : null;
@@ -393,6 +443,14 @@ export function SimulationWizard({
             {selectedDealer.VendorName}
             {selectedDealer.City ? ` · ${selectedDealer.City}` : ''}
             {selectedDealer.OriOfficeName ? ` · ${selectedDealer.OriOfficeName}` : ''}
+          </p>
+        )}
+        {isPromoLanding && selectedDealer && (
+          <p className="mt-2 text-xs text-[#002c5f] bg-[#002c5f]/5 border border-[#002c5f]/15 rounded-lg px-3 py-2 inline-block">
+            {t('promoLandingDealerHint', {
+              dealerName: selectedDealer.VendorName,
+              city: selectedDealer.City || selectedDealer.OriOfficeName || '',
+            })}
           </p>
         )}
       </div>
@@ -499,6 +557,7 @@ export function SimulationWizard({
                   suggestedPrice={specs.variantPrice ?? selectedAsset!.Price}
                   assetCode={selectedAsset!.AssetCode}
                   initialPartnerCode={partnerCode}
+                  initialDiscount={isPromoLanding ? discount : undefined}
                   lockPromotionDiscount={isDealerSales}
                   onComplete={handlePriceComplete}
                 />
@@ -567,6 +626,7 @@ export function SimulationWizard({
                       : undefined
                   }
                   assetSnapshot={leadAssetSnapshot}
+                  resultSelection={hydrationActive ? resultSelection : undefined}
                 />
               )}
             </div>
