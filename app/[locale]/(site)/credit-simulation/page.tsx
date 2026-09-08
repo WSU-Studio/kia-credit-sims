@@ -1,13 +1,18 @@
 'use client';
 
-import { useMemo } from 'react';
+import { Suspense, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { SimulationWizard } from '@/app/components/simulation/SimulationWizard';
+import { PromoLandingWizard } from '@/app/components/simulation/PromoLandingWizard';
 import { LEAD_SOURCES } from '@/lib/lead-source';
+import { parsePromoQuerySlug } from '@/lib/promo-simulation';
 import type { SimulationWizardLabels } from '@/lib/simulation-wizard-labels';
 
-export default function SimulasiKreditPage() {
+function CreditSimulationInner() {
   const t = useTranslations('creditSimulation');
+  const searchParams = useSearchParams();
+  const promoSlug = parsePromoQuerySlug(searchParams.get('promo'));
 
   const labels: SimulationWizardLabels = useMemo(
     () => ({
@@ -31,11 +36,23 @@ export default function SimulasiKreditPage() {
     [t]
   );
 
+  if (promoSlug) {
+    return <PromoLandingWizard slug={promoSlug} labels={labels} />;
+  }
+
   return (
     <SimulationWizard
       mode="public"
       labels={labels}
       leadSource={LEAD_SOURCES.WEBSITE}
     />
+  );
+}
+
+export default function SimulasiKreditPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white" />}>
+      <CreditSimulationInner />
+    </Suspense>
   );
 }
