@@ -1,7 +1,7 @@
 import { getDevOriginFallback } from '@/lib/brand';
 import { extractBucketAndKeyFromS3Url, isLeadKtpS3Key } from '@/lib/s3-url';
 
-export const KTP_OBJECT_PREFIX = 'hcfi_leads_ktp/';
+export const KTP_OBJECT_PREFIX = 'kia_leads_ktp/';
 
 export type KtpStorageRef =
   | { kind: 's3'; bucket: string; key: string }

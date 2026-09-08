@@ -1,5 +1,5 @@
-const KTP_PREFIX = 'hcfi_leads_ktp/';
-const MEDIA_PREFIX = 'hcfi_media/';
+const KTP_PREFIX = 'kia_leads_ktp/';
+const MEDIA_PREFIX = 'kia_media/';
 
 /**
  * Parse virtual-hosted S3 URL: https://bucket.s3.region.amazonaws.com/key
@@ -28,7 +28,7 @@ export function isLeadKtpS3Key(key: string): boolean {
 }
 
 /**
- * Media (CMS) objects live under `hcfi_media/`. These are intended for public
+ * Media (CMS) objects live under `kia_media/`. These are intended for public
  * consumption (banners, articles, etc.) but the bucket itself is private —
  * only reachable via VPC endpoint. We serve them through our own backend proxy
  * (`/api/media/file/{key}`) so the browser never hits S3 directly.
@@ -51,7 +51,7 @@ export function mediaProxyUrlFromKey(key: string): string {
 
 /**
  * Idempotent URL normalizer for media display:
- *  - Direct S3 URL pointing into `hcfi_media/...` → rewritten to proxy URL
+ *  - Direct S3 URL pointing into `kia_media/...` → rewritten to proxy URL
  *  - Already-proxy URL (`/api/media/file/...`) → returned unchanged
  *  - Any other URL (external, cloudinary legacy, /images/*, etc.) → unchanged
  *
