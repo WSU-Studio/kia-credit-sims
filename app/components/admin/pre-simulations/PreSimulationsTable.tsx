@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
-import { IconExternalLink, IconTrash, IconPlus, IconQrcode, IconLink } from '@tabler/icons-react';
+import { IconExternalLink, IconTrash, IconPlus, IconQrcode, IconLink, IconPlayerPlay } from '@tabler/icons-react';
 import { AdminLink } from '@/app/components/admin/AdminLink';
+import { CopyIconButton } from '@/app/components/admin/CopyIconButton';
 import { TablePagination } from '@/app/components/admin/TablePagination';
 import { buildPreSimulationPublicPath } from '@/lib/pre-simulation';
+import { buildPromoSimulationPublicPath } from '@/lib/promo-simulation';
 import Link from 'next/link';
 
 type PreSimItem = {
@@ -26,6 +28,11 @@ type PreSimItem = {
 function absolutePublicUrl(slug: string): string {
   if (typeof window === 'undefined') return buildPreSimulationPublicPath(slug);
   return `${window.location.origin}${buildPreSimulationPublicPath(slug)}`;
+}
+
+function absoluteLiveUrl(slug: string): string {
+  if (typeof window === 'undefined') return buildPromoSimulationPublicPath(slug);
+  return `${window.location.origin}${buildPromoSimulationPublicPath(slug)}`;
 }
 
 export function PreSimulationsTable() {
@@ -88,15 +95,6 @@ export function PreSimulationsTable() {
     }
   };
 
-  const copyLink = async (slug: string) => {
-    try {
-      await navigator.clipboard.writeText(absolutePublicUrl(slug));
-      alert('Link disalin');
-    } catch {
-      alert('Gagal menyalin link');
-    }
-  };
-
   const empty = useMemo(() => !loading && items.length === 0, [loading, items.length]);
 
   if (loading && items.length === 0) {
@@ -109,7 +107,7 @@ export function PreSimulationsTable() {
         <div>
           <h2 className="text-lg font-semibold text-gray-900">Pre-Simulation Event</h2>
           <p className="text-xs text-gray-500 mt-0.5">
-            Simulasi siap pakai untuk barcode / QR.
+            Simulasi siap pakai untuk barcode / QR, atau link live ke step 5.
           </p>
         </div>
         <AdminLink
@@ -184,14 +182,22 @@ export function PreSimulationsTable() {
                         <IconQrcode size={14} />
                         QR
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => void copyLink(item.slug)}
+                      <CopyIconButton
+                        value={absolutePublicUrl(item.slug)}
+                        idleTitle="Salin link snapshot (QR)"
+                        copiedTitle="Tersalin"
+                        icon={<IconLink size={14} />}
                         className="inline-flex items-center gap-1 px-2 py-1 text-xs border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 cursor-pointer"
-                        title="Salin link"
-                      >
-                        <IconLink size={14} />
-                      </button>
+                        copiedClassName="inline-flex items-center gap-1 px-2 py-1 text-xs border border-emerald-300 bg-emerald-50 text-emerald-800 rounded-lg"
+                      />
+                      <CopyIconButton
+                        value={absoluteLiveUrl(item.slug)}
+                        idleTitle="Salin link simulasi live (step 5)"
+                        copiedTitle="Tersalin"
+                        icon={<IconPlayerPlay size={14} />}
+                        className="inline-flex items-center gap-1 px-2 py-1 text-xs border border-[#002c5f]/30 rounded-lg hover:bg-[#002c5f]/5 text-[#002c5f] cursor-pointer"
+                        copiedClassName="inline-flex items-center gap-1 px-2 py-1 text-xs border border-emerald-300 bg-emerald-50 text-emerald-800 rounded-lg"
+                      />
                       <Link
                         href={absolutePublicUrl(item.slug)}
                         target="_blank"
@@ -244,6 +250,9 @@ export function PreSimulationsTable() {
             <p className="mt-1 text-xs font-mono text-gray-500 break-all">
               {absolutePublicUrl(qrFor.slug)}
             </p>
+            <p className="mt-2 text-xs text-gray-500">
+              QR mengarah ke snapshot read-only. Link live (bisa submit) ada di tombol play pada tabel.
+            </p>
             <div className="mt-4 flex justify-center">
               {qrDataUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -253,13 +262,16 @@ export function PreSimulationsTable() {
               )}
             </div>
             <div className="mt-4 flex gap-2">
-              <button
-                type="button"
-                onClick={() => void copyLink(qrFor.slug)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 text-gray-700 cursor-pointer"
+              <CopyIconButton
+                value={absolutePublicUrl(qrFor.slug)}
+                idleTitle="Salin link snapshot"
+                copiedTitle="Tersalin"
+                wrapperClassName="flex-1"
+                className="w-full inline-flex items-center justify-center gap-1 px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 text-gray-700 cursor-pointer"
+                copiedClassName="w-full inline-flex items-center justify-center gap-1 px-3 py-2 border border-emerald-300 bg-emerald-50 text-emerald-800 rounded-lg text-sm font-medium"
               >
                 Salin Link
-              </button>
+              </CopyIconButton>
               {qrDataUrl && (
                 <a
                   href={qrDataUrl}
