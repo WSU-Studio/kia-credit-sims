@@ -21,6 +21,16 @@
   --color-action: var(--action);
   --font-sans: var(--font-hyundai-sans), var(--font-montserrat), system-ui, -apple-system, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --animate-motion-lines: motion-lines 0.85s linear infinite;
+}
+
+@keyframes motion-lines {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
 }
 
 @media (prefers-color-scheme: dark) {

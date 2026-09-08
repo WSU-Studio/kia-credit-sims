@@ -8,6 +8,7 @@ import { usePromoLanding } from '@/app/hooks/usePromoLanding';
 import { LEAD_SOURCES } from '@/lib/lead-source';
 import type { SimulationWizardLabels } from '@/lib/simulation-wizard-labels';
 import { Link } from '@/i18n/navigation';
+import { MovingCarLoader } from '@/app/components/simulation/MovingCarLoader';
 
 type PromoLandingWizardProps = {
   slug: string;
@@ -22,11 +23,13 @@ export function PromoLandingWizard({ slug, labels }: PromoLandingWizardProps) {
     return (
       <div className="min-h-screen bg-white py-12 text-gray-900">
         <Container>
-          <div className="text-center py-16">
+          <div className="text-center py-16 flex flex-col items-center gap-4">
             <div className="inline-flex items-center gap-3 text-gray-500">
               <span className="inline-block w-4 h-4 border-2 border-[#002c5f] border-t-transparent rounded-full animate-spin" />
               {t('promoLandingLoading')}
             </div>
+
+            <MovingCarLoader />
           </div>
         </Container>
       </div>

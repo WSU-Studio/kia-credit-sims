@@ -36,6 +36,7 @@ Fork of `hfci-credit-sims` for Hyundai Capital KIA financing. Engine (LOS Confin
 - `BannerCtaFields` — banner CTA: live promo / snapshot QR / custom URL
 - `CopyIconButton` — copy live or snapshot link with inline success feedback
 - `lib/promo-simulation.ts` — Jakarta dealer picker, seed from PreSimulation row, live vs snapshot hrefs
+- `MovingCarLoader` — animated car loader on promo landing (same as HCFI)
 
 ## Patterns
 
