@@ -6,6 +6,7 @@ import type { FinalSummaryInfo, ProductCalculation, Vendor } from '@/app/types/c
 import type { LeadSource } from '@/lib/lead-source';
 import { LEAD_SOURCES } from '@/lib/lead-source';
 import type { LeadAssetSnapshot } from '@/lib/lead-asset-snapshot';
+import type { PromoResultSelection } from '@/lib/promo-simulation';
 import { IconBrandWhatsapp, IconFileDescription, IconRefresh, IconSend } from '@tabler/icons-react';
 import {
   SimulationSummaryModal,
@@ -80,6 +81,8 @@ interface ResultStepProps {
    * setelah produk + tenor dipilih.
    */
   variant?: 'default' | 'pre-simulation';
+  /** Prefill produk/DP/tenor dari template promo live. */
+  resultSelection?: PromoResultSelection | null;
   onCapturePreSimulation?: (data: {
     productCode: string;
     productName: string;
@@ -104,12 +107,15 @@ export function ResultStep({
   onSelectProduct,
   onRestart,
   variant = 'default',
+  resultSelection = null,
   onCapturePreSimulation,
 }: ResultStepProps) {
   const t = useTranslations('creditSimulation');
   const isDealerSales = leadSource === LEAD_SOURCES.DEALER_SALES;
   const isPreSimulation = variant === 'pre-simulation';
-  const [tab, setTab] = useState<TabKind>('Standard');
+  const [tab, setTab] = useState<TabKind>(
+    resultSelection?.isPromotion ? 'Promotion' : 'Standard'
+  );
   const [listStandard, setListStandard] = useState<ProductCalculation[]>([]);
   const [listPromo, setListPromo] = useState<ProductCalculation[]>([]);
   const [partnerCodeUnmatched, setPartnerCodeUnmatched] = useState(false);
@@ -119,16 +125,22 @@ export function ResultStep({
   const [savingPreSim, setSavingPreSim] = useState(false);
 
   const [selectedProduct, setSelectedProduct] = useState<ProductCalculation | null>(null);
-  const [dpPercent, setDpPercent] = useState<number>(10);
+  const [dpPercent, setDpPercent] = useState<number>(
+    resultSelection?.dpPercent != null ? resultSelection.dpPercent : 10
+  );
   // Teks input DP manual, terpisah dari dpPercent: kalau langsung dikontrol
   // dpPercent, ketikan di bawah minimum (mis. "5" saat mengetik "55" dengan
   // min 50) tidak memicu re-render sehingga tampilan dan state diam-diam beda.
   const [dpInput, setDpInput] = useState<string>('10');
-  const [firstInstallment, setFirstInstallment] = useState<FirstInstallmentType>('ADDM');
+  const [firstInstallment, setFirstInstallment] = useState<FirstInstallmentType>(
+    resultSelection?.firstInstallment ?? 'ADDM'
+  );
   const [availableFirstInstallments, setAvailableFirstInstallments] = useState<
     FirstInstallmentType[]
   >([]);
-  const [selectedTenor, setSelectedTenor] = useState<number>(36);
+  const [selectedTenor, setSelectedTenor] = useState<number>(
+    resultSelection?.tenor ?? 36
+  );
 
   const [tableRows, setTableRows] = useState<ProductCalculation[]>([]);
   // Hyundai bisa jawab sukses dengan 0 tenor (mis. DP terlalu tinggi untuk
@@ -164,6 +176,10 @@ export function ResultStep({
   const finalSummaryGeneration = useRef(0);
   /** Skip one auto-calculate setelah FI di-sync dari response API (hindari double-fetch). */
   const skipNextCalculateRef = useRef(false);
+  const pendingTenorRef = useRef<number | null>(
+    resultSelection?.tenor != null ? resultSelection.tenor : null
+  );
+  const seedProductCodeRef = useRef(resultSelection?.productCode ?? null);
 
   const hasPromo = listPromo.length > 0;
   const products = tab === 'Standard' ? listStandard : listPromo;
@@ -470,22 +486,35 @@ export function ResultStep({
       setListPromo(rawPromo);
       setPartnerCodeUnmatched(data.partnerCodeUnmatched === true);
 
+      const allProducts = [...rawStandard, ...rawPromo];
+      const seedCode = seedProductCodeRef.current;
+      const seeded = seedCode
+        ? allProducts.find((product) => product.ProductCode === seedCode)
+        : undefined;
+      if (seeded && rawPromo.some((product) => product.ProductCode === seeded.ProductCode)) {
+        if (resultSelection?.isPromotion) setTab('Promotion');
+      }
+
       if (tab === 'Standard' && rawStandard.length === 0 && rawPromo.length > 0) {
         setTab('Promotion');
       }
 
       setSelectedProduct((prev) => {
+        if (seeded) return seeded;
         if (!first) return null;
         if (!prev) return first;
-        const currentProducts = [...rawStandard, ...rawPromo];
-        const stillExists = currentProducts.some(
+        const stillExists = allProducts.some(
           (product) =>
             product.ProductCode === prev.ProductCode && product.ProductName === prev.ProductName
         );
         return stillExists ? prev : first;
       });
+      if (seeded) seedProductCodeRef.current = null;
       if (first) {
-        setDpPercent((prev) => (prev === 10 ? resolveDefaultDpPercent(first) : prev));
+        setDpPercent((prev) => {
+          if (resultSelection?.dpPercent != null) return prev;
+          return prev === 10 ? resolveDefaultDpPercent(seeded ?? first) : prev;
+        });
       }
     } catch (e) {
       if (generation !== fetchListGeneration.current) return;
@@ -556,8 +585,18 @@ export function ResultStep({
       setEmptyResult(rows.length === 0);
       const row36 = rows.find((r) => r.Tenor === 36);
       const first = rows[0];
-      setSelectedTenor(row36?.Tenor ?? first?.Tenor ?? 36);
-      const seedRow = row36 ?? first;
+      const pending = pendingTenorRef.current;
+      const nextTenor =
+        pending != null && rows.some((r) => r.Tenor === pending)
+          ? pending
+          : rows.some((r) => r.Tenor === selectedTenor)
+            ? selectedTenor
+            : row36?.Tenor ?? first?.Tenor ?? 36;
+      if (pending != null && rows.some((r) => r.Tenor === pending)) {
+        pendingTenorRef.current = null;
+      }
+      setSelectedTenor(nextTenor);
+      const seedRow = rows.find((r) => r.Tenor === nextTenor) ?? row36 ?? first;
       if (seedRow && !feeTouchedRef.current) {
         const ntf = ntfFromAsset(Number(otrPrice) || 0, dpPercent);
         setAdminFeeAmt(Number(seedRow.AdminFeeAmt) || 0);
