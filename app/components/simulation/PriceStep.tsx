@@ -13,6 +13,8 @@ interface PriceStepProps {
   initialPartnerCode?: string | null;
   /** Prefill from dealer promotion (nominal) */
   promotionDiscount?: number;
+  /** Snapshot discount when landing from a live promo template. */
+  initialDiscount?: number;
   /** When true, discount field is read-only (dealer-sales mode) */
   lockPromotionDiscount?: boolean;
   onComplete: (
@@ -28,18 +30,24 @@ export function PriceStep({
   assetCode,
   initialPartnerCode = null,
   promotionDiscount: promotionDiscountProp,
+  initialDiscount,
   lockPromotionDiscount = false,
   onComplete,
 }: PriceStepProps) {
   const t = useTranslations('creditSimulation');
-  const [manualDiscount, setManualDiscount] = useState<number | ''>(0);
+  const [manualDiscount, setManualDiscount] = useState<number | ''>(
+    initialDiscount && initialDiscount > 0 ? initialDiscount : 0
+  );
   const [partnerCode, setPartnerCode] = useState<string>(
     () => initialPartnerCode ?? ''
   );
   const [error, setError] = useState<string | null>(null);
 
   const otrPrice = suggestedPrice ?? 0;
-  const lookupEnabled = promotionDiscountProp == null && !!assetCode;
+  const lookupEnabled =
+    promotionDiscountProp == null &&
+    !!assetCode &&
+    !(initialDiscount && initialDiscount > 0);
   const { loading: promoLoading, result: promoResult } = useDealerPromotionLookup(
     assetCode,
     otrPrice,
