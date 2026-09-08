@@ -7,6 +7,7 @@ import { PreSimulationSummaryView } from '@/app/components/simulation/PreSimulat
 import type { FinalSummaryInfo } from '@/app/types/credit-simulation';
 import { Link } from '@/i18n/navigation';
 import { BRAND } from '@/lib/brand';
+import { buildPromoSimulationHref } from '@/lib/promo-simulation';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,8 +64,14 @@ export default async function PreSimulationPublicPage({ params }: PageProps) {
           />
           <div className="flex flex-wrap gap-3 justify-center">
             <Link
-              href="/credit-simulation"
+              href={buildPromoSimulationHref(item.slug)}
               className="inline-flex items-center justify-center px-5 h-11 rounded-lg bg-[#002c5f] text-white text-sm font-semibold hover:bg-[#002c5f]/90 transition"
+            >
+              {t('continueThisSimulation')}
+            </Link>
+            <Link
+              href="/credit-simulation"
+              className="inline-flex items-center justify-center px-5 h-11 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
             >
               {t('createOwnSimulation')}
             </Link>
