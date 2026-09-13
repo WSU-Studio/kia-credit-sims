@@ -5,6 +5,7 @@ import type { ComponentType } from 'react';
 import { usePathname } from 'next/navigation';
 import {
   IconLayoutDashboard,
+  IconChartBar,
   IconUsers,
   IconShield,
   IconPhoto,
@@ -27,6 +28,7 @@ import { ADMIN_MENUS } from '@/lib/admin-menus';
 
 const menuIcons: Record<string, ComponentType<{ size?: number }>> = {
   DASHBOARD: IconLayoutDashboard,
+  ANALYTICS: IconChartBar,
   USERS: IconUsers,
   ROLES: IconShield,
   BANNERS: IconPhoto,
