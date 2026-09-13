@@ -138,6 +138,7 @@ export const simulateBodySchema = withLeadNoAlias(
       partnerCode: optionalPartnerCode,
       leadNo: leadNoSchema.optional(),
       adminFeeAmt: finiteNumber({ min: 0, max: 50_000_000, label: 'AdminFeeAmt', required: false }).optional(),
+      adminFeeBhv: z.string().trim().max(20).optional(),
       provisionFee: finiteNumber({ min: 0, max: 30, label: 'ProvisionFee', required: false }).optional(),
     })
     .strip()
@@ -240,6 +241,7 @@ export const finalSummaryBodySchema = withLeadNoAlias(
       isPromotion: z.boolean().optional(),
       partnerCode: optionalPartnerCode,
       adminFeeAmt: finiteNumber({ min: 0, max: 50_000_000, label: 'AdminFeeAmt', required: false }).optional(),
+      adminFeeBhv: z.string().trim().max(20).optional(),
       provisionFee: finiteNumber({ min: 0, max: 30, label: 'ProvisionFee', required: false }).optional(),
     })
     .strip()
