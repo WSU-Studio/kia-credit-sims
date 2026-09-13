@@ -30,9 +30,11 @@ export type LeadMonitoringResult = {
 };
 
 export type LocalLeadTrackingRef = {
+  id: string;
   simulationLeadNo: string | null;
   hyundaiLeadNo: string | null;
   hyundaiAssignStatus: string;
+  hyundaiGoLiveAt: Date | null;
   name: string | null;
   vehicleSummary: string | null;
 };

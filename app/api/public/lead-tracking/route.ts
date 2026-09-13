@@ -23,6 +23,7 @@ import {
   type LocalLeadTrackingRef,
 } from '@/lib/lead-tracking';
 import { findRejectedTrackingTask } from '@/lib/lead-tracking-stages';
+import { stampHyundaiGoLiveIfReached } from '@/lib/lead-go-live';
 import { prisma } from '@/lib/prisma';
 
 type MonitoringEnvelope = {
@@ -97,16 +98,20 @@ function normalizeLeadNo(value: string | null | undefined): string | null {
 }
 
 function toTrackingRef(row: {
+  id: string;
   simulationLeadNo: string | null;
   hyundaiLeadNo: string | null;
   hyundaiAssignStatus: string;
+  hyundaiGoLiveAt: Date | null;
   name: string | null;
   vehicleSummary: string | null;
 }): LocalLeadTrackingRef {
   return {
+    id: row.id,
     simulationLeadNo: row.simulationLeadNo,
     hyundaiLeadNo: row.hyundaiLeadNo,
     hyundaiAssignStatus: row.hyundaiAssignStatus,
+    hyundaiGoLiveAt: row.hyundaiGoLiveAt,
     name: row.name,
     vehicleSummary: row.vehicleSummary,
   };
@@ -119,9 +124,11 @@ function toTrackingRef(row: {
  */
 function pickBestTrackingLead(
   candidates: Array<{
+    id: string;
     simulationLeadNo: string | null;
     hyundaiLeadNo: string | null;
     hyundaiAssignStatus: string;
+    hyundaiGoLiveAt: Date | null;
     name: string | null;
     vehicleSummary: string | null;
   }>,
@@ -151,9 +158,11 @@ async function findLocalLead(leadNo: string): Promise<LocalLeadTrackingRef | nul
   if (!normalized) return null;
 
   const select = {
+    id: true,
     simulationLeadNo: true,
     hyundaiLeadNo: true,
     hyundaiAssignStatus: true,
+    hyundaiGoLiveAt: true,
     name: true,
     vehicleSummary: true,
   } as const;
@@ -211,17 +220,21 @@ async function findLocalLead(leadNo: string): Promise<LocalLeadTrackingRef | nul
   try {
     const rows = await prisma.$queryRaw<
       Array<{
+        id: string;
         simulationLeadNo: string | null;
         hyundaiLeadNo: string | null;
         hyundaiAssignStatus: string;
+        hyundaiGoLiveAt: Date | null;
         name: string | null;
         vehicleSummary: string | null;
       }>
     >`
       SELECT
+        id,
         "simulationLeadNo",
         "hyundaiLeadNo",
         "hyundaiAssignStatus",
+        "hyundaiGoLiveAt",
         name,
         "vehicleSummary"
       FROM leads
@@ -374,6 +387,18 @@ export async function POST(request: NextRequest) {
     }
 
     const enriched = enrichWithLocal(base, local, resolved.simulationLeadNo);
+    if (local?.id) {
+      void stampHyundaiGoLiveIfReached({
+        leadId: local.id,
+        hyundaiGoLiveAt: local.hyundaiGoLiveAt,
+        tasks: base.ListTaskHistory,
+      }).catch((err) => {
+        console.warn(
+          '[lead-tracking] go-live stamp failed',
+          err instanceof Error ? err.message : err
+        );
+      });
+    }
     return NextResponse.json({
       data: enriched,
       found: true,
