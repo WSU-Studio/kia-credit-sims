@@ -1,12 +1,18 @@
+'use client';
+
 import type { Product } from "@/app/types";
 import Image from "next/image";
-import { Link } from "@/i18n/navigation";
+import { Link, usePathname } from "@/i18n/navigation";
+import { useLocale } from "next-intl";
+import { track } from "@/lib/first-party-tracker/client";
 
 type ProductCardProps = Product & {
   className?: string;
 };
 
 export function ProductCard({ id, title, subtitle, image, className }: ProductCardProps) {
+  const pathname = usePathname();
+  const locale = useLocale();
   const base =
     "relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-lg shadow-black/40 aspect-[4/3]";
   const linkClass = `${base} block transition-transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-[var(--action)] focus:ring-offset-2`;
@@ -55,6 +61,13 @@ export function ProductCard({ id, title, subtitle, image, className }: ProductCa
         href={`/products/${id}`}
         className={className ? `${linkClass} ${className}` : linkClass}
         aria-label={`Lihat detail ${title}`}
+        onClick={() => {
+          track('product_click', {
+            path: pathname,
+            locale,
+            payload: { productId: id, productTitle: title },
+          });
+        }}
       >
         {cardContent}
       </Link>
