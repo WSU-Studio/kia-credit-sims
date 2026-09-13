@@ -2,7 +2,9 @@ import type { ProductCalculation } from '@/app/types/credit-simulation';
 
 /** Kelipatan stepper admin fee (meeting Phase 2 Poin 2). */
 export const ADMIN_FEE_STEP_AMT = 500_000;
-/** Default cap admin fee jika CMS belum set. */
+/** Batas teknis jika rule API Def/Min tanpa ceiling. */
+export const ADMIN_FEE_TECHNICAL_MAX_AMT = 50_000_000;
+/** Default cap admin fee jika CMS belum set (legacy; quotation memakai AdminFeeBhv). */
 export const DEFAULT_MAX_ADMIN_FEE_AMT = 9_000_000;
 /** Kelipatan stepper provision % (meeting Phase 2 Poin 2). */
 export const PROVISION_FEE_STEP_PRCNT = 0.5;
@@ -11,6 +13,7 @@ export const DEFAULT_MAX_PROVISION_PRCNT = 9;
 
 export type SalesmanFeeOverride = {
   adminFeeAmt?: number;
+  adminFeeBhv?: string;
   /** Persen, mengikuti `ProvisionType: PRCNT` di payload Hyundai. */
   provisionFee?: number;
   provisionType?: string;
@@ -20,6 +23,42 @@ export type SalesmanFeeCaps = {
   maxAdminFeeAmt: number;
   maxProvisionPrcnt: number;
 };
+
+export type HyundaiFeeBhv = 'LOCK' | 'MIN' | 'MAX' | 'DEF';
+
+export type AdminFeeRule = {
+  bhv: HyundaiFeeBhv;
+  amount: number;
+  min: number;
+  max: number;
+  locked: boolean;
+};
+
+/** Hyundai `AdminFeeBhv`: Lock / Min / Max / Def (Harry). */
+export function normalizeFeeBhv(raw: string | null | undefined): HyundaiFeeBhv {
+  const v = (raw ?? '').trim().toUpperCase().replace(/[\s-]+/g, '_');
+  if (v === 'LOCK' || v === 'LOCK_ALL' || v === 'LOCKALL') return 'LOCK';
+  if (v === 'MIN') return 'MIN';
+  if (v === 'MAX') return 'MAX';
+  return 'DEF';
+}
+
+export function resolveAdminFeeRule(
+  row: Pick<ProductCalculation, 'AdminFeeAmt' | 'AdminFeeBhv'> | null | undefined
+): AdminFeeRule {
+  const amount = Math.max(0, Number(row?.AdminFeeAmt) || 0);
+  const bhv = normalizeFeeBhv(row?.AdminFeeBhv);
+  if (bhv === 'LOCK') {
+    return { bhv, amount, min: amount, max: amount, locked: true };
+  }
+  if (bhv === 'MIN') {
+    return { bhv, amount, min: amount, max: ADMIN_FEE_TECHNICAL_MAX_AMT, locked: false };
+  }
+  if (bhv === 'MAX') {
+    return { bhv, amount, min: 0, max: amount, locked: false };
+  }
+  return { bhv, amount, min: 0, max: ADMIN_FEE_TECHNICAL_MAX_AMT, locked: false };
+}
 
 export function parseFeeCapNumber(raw: unknown, fallback: number, max: number): number {
   const n = typeof raw === 'number' ? raw : Number(String(raw ?? '').replace(/[^\d.]/g, ''));
@@ -106,8 +145,14 @@ export function clampSalesmanFeeOverride(
   return {
     adminFeeAmt:
       override.adminFeeAmt != null
-        ? snapToStep(override.adminFeeAmt, ADMIN_FEE_STEP_AMT, 0, caps.maxAdminFeeAmt)
+        ? snapToStep(
+            override.adminFeeAmt,
+            ADMIN_FEE_STEP_AMT,
+            0,
+            ADMIN_FEE_TECHNICAL_MAX_AMT
+          )
         : undefined,
+    adminFeeBhv: override.adminFeeBhv,
     provisionFee:
       override.provisionFee != null
         ? snapToStep(override.provisionFee, PROVISION_FEE_STEP_PRCNT, 0, caps.maxProvisionPrcnt)
@@ -128,7 +173,9 @@ export function buildHyundaiFeeRequestFields(
   if (override.adminFeeAmt != null) {
     fields.AdminFeeAmt = override.adminFeeAmt;
     fields.AdminFeeCptlz = false;
-    fields.AdminFeeBhv = 'DEF';
+    if (override.adminFeeBhv) {
+      fields.AdminFeeBhv = override.adminFeeBhv;
+    }
   }
   if (override.provisionFee != null) {
     fields.ProvisionType = override.provisionType || 'PRCNT';
@@ -141,6 +188,7 @@ export function buildHyundaiFeeRequestFields(
 
 export function parseSalesmanFeeOverride(input: {
   adminFeeAmt?: unknown;
+  adminFeeBhv?: unknown;
   provisionFee?: unknown;
 } | null | undefined): SalesmanFeeOverride | null {
   if (!input) return null;
@@ -149,8 +197,13 @@ export function parseSalesmanFeeOverride(input: {
   const hasAdmin = Number.isFinite(adminFeeAmt);
   const hasProvision = Number.isFinite(provisionFee);
   if (!hasAdmin && !hasProvision) return null;
+  const adminFeeBhv =
+    typeof input.adminFeeBhv === 'string' && input.adminFeeBhv.trim()
+      ? input.adminFeeBhv.trim()
+      : undefined;
   return {
     ...(hasAdmin ? { adminFeeAmt } : {}),
+    ...(adminFeeBhv ? { adminFeeBhv } : {}),
     ...(hasProvision ? { provisionFee } : {}),
     provisionType: 'PRCNT',
   };
