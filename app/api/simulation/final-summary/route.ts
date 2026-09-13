@@ -113,6 +113,7 @@ export async function POST(request: NextRequest) {
       isPromotion,
       partnerCode,
       adminFeeAmt,
+      adminFeeBhv,
       provisionFee,
     } = parsed.data;
     const dpPercent =
@@ -121,7 +122,7 @@ export async function POST(request: NextRequest) {
         : parsed.data.dpPrcnt!;
 
     const caps = await getSalesmanFeeCapsFromSettings();
-    const parsedOverride = parseSalesmanFeeOverride({ adminFeeAmt, provisionFee });
+    const parsedOverride = parseSalesmanFeeOverride({ adminFeeAmt, adminFeeBhv, provisionFee });
     const feeOverride = parsedOverride
       ? clampSalesmanFeeOverride(parsedOverride, caps)
       : null;
