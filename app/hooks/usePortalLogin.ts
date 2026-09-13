@@ -2,8 +2,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { signIn } from 'next-auth/react';
-import { OTP_RESEND_COOLDOWN_SEC } from '@/lib/auth-otp-constants';
-import { resolveLoginErrorMessage } from '@/lib/auth-login-errors';
+import {
+  OTP_REQUEST_TIMEOUT_MS,
+  OTP_RESEND_COOLDOWN_SEC,
+} from '@/lib/auth-otp-constants';
+import { LOGIN_ERROR_CODES, resolveLoginErrorMessage } from '@/lib/auth-login-errors';
 
 export type PortalLoginStep = 'password' | 'otp';
 
@@ -56,6 +59,7 @@ export function usePortalLogin() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
+        signal: AbortSignal.timeout(OTP_REQUEST_TIMEOUT_MS),
         body: JSON.stringify({
           email,
           password,
@@ -73,7 +77,11 @@ export function usePortalLogin() {
         return 'error';
       }
 
-      if (data.otpRequired && data.challengeId) {
+      if (data.otpRequired) {
+        if (!data.challengeId) {
+          setError('Kode OTP gagal dikirim. Coba lagi beberapa saat.');
+          return 'error';
+        }
         setChallengeId(data.challengeId);
         setEmailHint(data.emailHint ?? '');
         setStep('otp');
@@ -89,9 +97,14 @@ export function usePortalLogin() {
       });
 
       if (result?.error) {
+        const looksLikeOtpRequired =
+          result.code === LOGIN_ERROR_CODES.OTP_REQUIRED ||
+          (data.otpRequired === false && result.error === 'CredentialsSignin');
         setError(
-          resolveLoginErrorMessage(result.error, result.code) ??
-            'Email atau password salah.'
+          looksLikeOtpRequired
+            ? 'Login memerlukan kode OTP. Coba masuk lagi — kode akan dikirim ke email.'
+            : (resolveLoginErrorMessage(result.error, result.code) ??
+              'Email atau password salah.')
         );
         return 'error';
       }
@@ -99,7 +112,14 @@ export function usePortalLogin() {
       return 'signed-in';
     } catch (err) {
       console.error('Login request error:', err);
-      setError('Terjadi kesalahan. Silakan coba lagi.');
+      const aborted =
+        err instanceof DOMException &&
+        (err.name === 'AbortError' || err.name === 'TimeoutError');
+      setError(
+        aborted
+          ? 'Koneksi timeout saat mengirim OTP. Silakan coba lagi.'
+          : 'Terjadi kesalahan. Silakan coba lagi.'
+      );
       return 'error';
     } finally {
       setLoading(false);
@@ -147,6 +167,7 @@ export function usePortalLogin() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
+        signal: AbortSignal.timeout(OTP_REQUEST_TIMEOUT_MS),
         body: JSON.stringify({ challengeId }),
       });
       const data = (await res.json()) as OtpResendResponse;
