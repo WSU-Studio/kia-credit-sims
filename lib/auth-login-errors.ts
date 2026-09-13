@@ -41,11 +41,7 @@ export function resolveLoginErrorMessage(
     return LOGIN_ERROR_MESSAGES[code as LoginErrorCode];
   }
 
-  if (
-    error === 'CredentialsSignin' ||
-    error === 'Configuration' ||
-    code === LOGIN_ERROR_CODES.CREDENTIALS
-  ) {
+  if (code === LOGIN_ERROR_CODES.CREDENTIALS || error === 'CredentialsSignin') {
     return LOGIN_ERROR_MESSAGES[LOGIN_ERROR_CODES.CREDENTIALS];
   }
 
