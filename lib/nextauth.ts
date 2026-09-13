@@ -22,10 +22,15 @@ const SESSION_COOKIE_MAX_AGE = 30 * 24 * 60 * 60; // 30 days
 /** Default session when remember-me is off. */
 const SESSION_MAX_AGE_DEFAULT = 6 * 60 * 60; // 6 hours
 
+class PortalCredentialsSignin extends CredentialsSignin {
+  constructor(code: string) {
+    super();
+    this.code = code;
+  }
+}
+
 function rejectLogin(code: string): never {
-  const error = new CredentialsSignin();
-  error.code = code;
-  throw error;
+  throw new PortalCredentialsSignin(code);
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
