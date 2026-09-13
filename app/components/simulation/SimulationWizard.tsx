@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { usePathname } from '@/i18n/navigation';
+import { track } from '@/lib/first-party-tracker/client';
 import { IconCheck, IconX } from '@tabler/icons-react';
 import type { UserLocation } from '@/app/components/simulation/ContactModal';
 import { Container } from '@/app/components/ui/Container';
@@ -99,9 +101,13 @@ export function SimulationWizard({
   onCapturePreSimulation,
 }: SimulationWizardProps) {
   const t = useTranslations('creditSimulation');
+  const pathname = usePathname();
+  const locale = useLocale();
   const isDealerSales = mode === 'dealer-sales';
   const isPreSimulation = mode === 'pre-simulation';
   const isPromoLanding = mode === 'promo-landing';
+  const shouldTrackFunnel = mode === 'public' || isPromoLanding;
+  const funnelStartedRef = useRef(false);
   const steps = isDealerSales ? DEALER_STEPS : PUBLIC_STEPS;
   const [hydrationActive, setHydrationActive] = useState(() => !!hydration);
   const promoLeadRequestedRef = useRef(false);
@@ -144,6 +150,24 @@ export function SimulationWizard({
       setSelectedDealer(initialDealer);
     }
   }, [isDealerSales, initialDealer]);
+
+  useEffect(() => {
+    if (!shouldTrackFunnel) return;
+    if (!funnelStartedRef.current) {
+      funnelStartedRef.current = true;
+      track('sim_start', {
+        path: pathname,
+        locale,
+        payload: { step: currentStepKey },
+      });
+      return;
+    }
+    track('sim_step', {
+      path: pathname,
+      locale,
+      payload: { step: currentStepKey },
+    });
+  }, [shouldTrackFunnel, currentStepKey, pathname, locale]);
 
   useEffect(() => {
     // Lokasi hanya dipakai saat submit lead pengunjung (ContactModal).
@@ -558,7 +582,8 @@ export function SimulationWizard({
                   assetCode={selectedAsset!.AssetCode}
                   initialPartnerCode={partnerCode}
                   initialDiscount={isPromoLanding ? discount : undefined}
-                  lockPromotionDiscount={isDealerSales}
+                  lockPromotionDiscount={false}
+                  allowDiscountOverride={isDealerSales}
                   onComplete={handlePriceComplete}
                 />
               )}
