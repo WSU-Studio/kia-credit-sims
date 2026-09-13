@@ -89,6 +89,9 @@ export const simulationLimiter = createLimiter(60, 60 * 1000);
 /** Public lead status inquiry — POST /api/public/lead-tracking. */
 export const leadTrackingLimiter = createLimiter(20, 60 * 1000);
 
+/** First-party analytics ingest — POST /api/t/e (pageviews + funnel). */
+export const analyticsIngestLimiter = createLimiter(120, 60 * 1000);
+
 // ---------- Authenticated-user limiters (key = user id) ----------
 
 /** Admin media upload — 30 per minute. Admins legitimately upload many files. */
