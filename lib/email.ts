@@ -7,8 +7,11 @@
  * Send is best-effort: failures are logged and return false so callers
  * can fail closed (OTP) without throwing through the request path.
  */
+import { lookup as dnsLookup } from 'node:dns/promises';
+import { isIP } from 'node:net';
 import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
+import type SMTPTransport from 'nodemailer/lib/smtp-transport';
 
 export interface SendEmailInput {
   to: string | string[];
@@ -35,23 +38,61 @@ export function isEmailConfigured(): boolean {
   return readSmtpConfig() !== null;
 }
 
+const SMTP_CONNECTION_TIMEOUT_MS = 8_000;
+const SMTP_SOCKET_TIMEOUT_MS = 12_000;
+
 let cachedTransporter: Transporter | null = null;
 
-function getTransporter(): Transporter | null {
+/**
+ * Pin SMTP to an A record. Node 18+ Happy Eyeballs can pick AAAA first;
+ * TQA then fails with ENETUNREACH on IPv6 while `nc` on another host
+ * succeeds on IPv4. Connecting to the IPv4 literal matches `nc`.
+ */
+async function resolveSmtpConnectHost(hostname: string): Promise<{
+  connectHost: string;
+  servername: string;
+}> {
+  if (isIP(hostname) === 4) {
+    return { connectHost: hostname, servername: hostname };
+  }
+
+  const { address } = await dnsLookup(hostname, { family: 4 });
+  return { connectHost: address, servername: hostname };
+}
+
+async function getTransporter(): Promise<Transporter | null> {
   const config = readSmtpConfig();
   if (!config) return null;
 
   if (!cachedTransporter) {
-    cachedTransporter = nodemailer.createTransport({
-      host: config.host,
+    let connectHost = config.host;
+    let servername = config.host;
+    try {
+      const resolved = await resolveSmtpConnectHost(config.host);
+      connectHost = resolved.connectHost;
+      servername = resolved.servername;
+    } catch (error) {
+      console.error('[email] IPv4 DNS lookup failed', {
+        error: error instanceof Error ? error.message : error,
+      });
+      return null;
+    }
+
+    const options: SMTPTransport.Options = {
+      host: connectHost,
       port: config.port,
       secure: config.port === 465,
       requireTLS: config.port === 587,
+      connectionTimeout: SMTP_CONNECTION_TIMEOUT_MS,
+      greetingTimeout: SMTP_CONNECTION_TIMEOUT_MS,
+      socketTimeout: SMTP_SOCKET_TIMEOUT_MS,
+      tls: { servername },
       auth: {
         user: config.user,
         pass: config.pass,
       },
-    });
+    };
+    cachedTransporter = nodemailer.createTransport(options);
   }
 
   return cachedTransporter;
@@ -81,7 +122,7 @@ function buildDefaultHtml(subject: string, text: string): string {
  */
 export async function sendEmail(input: SendEmailInput): Promise<boolean> {
   const config = readSmtpConfig();
-  const transporter = getTransporter();
+  const transporter = await getTransporter();
   if (!config || !transporter) {
     if (process.env.NODE_ENV !== 'production') {
       console.warn('[email] SMTP not configured; skipping send', {
@@ -108,8 +149,6 @@ export async function sendEmail(input: SendEmailInput): Promise<boolean> {
     return true;
   } catch (error) {
     console.error('[email] send failed', {
-      subject: input.subject,
-      to: recipients,
       error: error instanceof Error ? error.message : error,
     });
     return false;
