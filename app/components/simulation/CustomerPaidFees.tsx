@@ -15,6 +15,9 @@ type CustomerPaidFeesProps = {
   provisionAmt: number;
   showProvision: boolean;
   caps: SalesmanFeeCaps;
+  adminFeeMin?: number;
+  adminFeeMax?: number;
+  adminFeeLocked?: boolean;
   disabled?: boolean;
   onAdminFeeChange: (next: number) => void;
   onProvisionPrcntChange: (next: number) => void;
@@ -36,6 +39,9 @@ export function CustomerPaidFees({
   provisionAmt,
   showProvision,
   caps,
+  adminFeeMin = 0,
+  adminFeeMax = 50_000_000,
+  adminFeeLocked = false,
   disabled,
   onAdminFeeChange,
   onProvisionPrcntChange,
@@ -70,14 +76,18 @@ export function CustomerPaidFees({
         label={labels.adminFee}
         hint={labels.adminFeeHint}
         valueLabel={formatCurrency(adminFeeAmt)}
-        disabled={disabled}
-        decrementDisabled={adminFeeAmt <= 0}
-        incrementDisabled={adminFeeAmt >= caps.maxAdminFeeAmt}
+        disabled={disabled || adminFeeLocked}
+        decrementDisabled={adminFeeLocked || adminFeeAmt <= adminFeeMin}
+        incrementDisabled={adminFeeLocked || adminFeeAmt >= adminFeeMax}
         onDecrement={() =>
-          onAdminFeeChange(stepValue(adminFeeAmt, -1, ADMIN_FEE_STEP_AMT, 0, caps.maxAdminFeeAmt))
+          onAdminFeeChange(
+            stepValue(adminFeeAmt, -1, ADMIN_FEE_STEP_AMT, adminFeeMin, adminFeeMax)
+          )
         }
         onIncrement={() =>
-          onAdminFeeChange(stepValue(adminFeeAmt, 1, ADMIN_FEE_STEP_AMT, 0, caps.maxAdminFeeAmt))
+          onAdminFeeChange(
+            stepValue(adminFeeAmt, 1, ADMIN_FEE_STEP_AMT, adminFeeMin, adminFeeMax)
+          )
         }
       />
       {showProvision ? (
