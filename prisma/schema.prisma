@@ -454,6 +454,8 @@ model Lead {
   hyundaiAssignStatus String    @default("PENDING") // PENDING, SUBMITTED, FAILED
   hyundaiAssignError  String?   @db.Text
   hyundaiAssignedAt   DateTime?
+  /// First time Hyundai monitoring shows Contract Activation completed.
+  hyundaiGoLiveAt     DateTime?
   /// WEBSITE | DEALER_SALES
   source              String    @default("WEBSITE")
   /// SupplierEmpNo yang terkirim ke Hyundai saat AddLeadAsset (pembanding data Adins)
@@ -469,7 +471,25 @@ model Lead {
   @@index([simulationLeadNo])
   @@index([source])
   @@index([salesUserId])
+  @@index([hyundaiGoLiveAt])
   @@map("leads")
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(uuid())
+  visitorId String
+  name      String
+  path      String
+  locale    String?
+  /// productId (product_click) or wizard step (sim_start / sim_step)
+  entityKey String?
+  payload   Json?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt, name])
+  @@index([visitorId])
+  @@index([name, entityKey, createdAt])
+  @@map("analytics_events")
 }
 
 model LeadOcrResult {
