@@ -1,7 +1,8 @@
 [
   { "code": "DASHBOARD",      "name": "Dashboard",            "path": "/admin/dashboard",      "order": 1  },
-  { "code": "USERS",          "name": "User Management",      "path": "/admin/users",          "order": 2  },
-  { "code": "ROLES",          "name": "Role & Permission",    "path": "/admin/roles",          "order": 3  },
+  { "code": "ANALYTICS",      "name": "Visitor Analytics",    "path": "/admin/analytics",      "order": 2  },
+  { "code": "USERS",          "name": "User Management",      "path": "/admin/users",          "order": 3  },
+  { "code": "ROLES",          "name": "Role & Permission",    "path": "/admin/roles",          "order": 4  },
   { "code": "BANNERS",        "name": "Banner Management",    "path": "/admin/banners",        "order": 4  },
   { "code": "BENEFITS",       "name": "Benefit Settings",     "path": "/admin/benefits",       "order": 11 },
   { "code": "PRODUCTS",       "name": "Product Section",      "path": "/admin/products",       "order": 5  },
