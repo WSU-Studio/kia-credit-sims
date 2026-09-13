@@ -7,6 +7,7 @@ import { Container } from "@/app/components/ui/Container";
 import { KiaLogo } from "@/app/components/brand/KiaLogo";
 import { Link, usePathname } from "@/i18n/navigation";
 import { IconMenu2 } from "@tabler/icons-react";
+import FirstPartyPageview from "@/app/components/layout/FirstPartyPageview";
 
 type HeaderProps = {
   items: NavItem[];
@@ -19,6 +20,8 @@ export function Header({ items, locale }: HeaderProps) {
   const pathname = usePathname();
 
   return (
+    <>
+      <FirstPartyPageview />
     <header className="fixed top-0 left-0 right-0 z-40 border-b border-[#05141f]/10 bg-white">
       <Container className="flex items-center justify-between h-14 px-4 md:px--0 gap-3">
         <div className="flex items-center gap-2">
@@ -95,5 +98,6 @@ export function Header({ items, locale }: HeaderProps) {
         </div>
       ) : null}
     </header>
+    </>
   );
 }
