@@ -110,6 +110,7 @@ export async function POST(request: NextRequest) {
       partnerCode,
       leadNo: parsedLeadNo,
       adminFeeAmt,
+      adminFeeBhv,
       provisionFee,
     } = parsed.data;
     const leadNo = parsedLeadNo || undefined;
@@ -118,7 +119,7 @@ export async function POST(request: NextRequest) {
       normalizeFirstInstallment(firstInstallment) ?? ('ADDM' as FirstInstallmentType);
 
     const caps = await getSalesmanFeeCapsFromSettings();
-    const parsedOverride = parseSalesmanFeeOverride({ adminFeeAmt, provisionFee });
+    const parsedOverride = parseSalesmanFeeOverride({ adminFeeAmt, adminFeeBhv, provisionFee });
     const feeOverride = parsedOverride
       ? clampSalesmanFeeOverride(parsedOverride, caps)
       : null;
