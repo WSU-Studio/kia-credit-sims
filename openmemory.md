@@ -44,6 +44,7 @@ Fork of `hfci-credit-sims` for Hyundai Capital KIA financing. Engine (LOS Confin
 - `AnalyticsEvent` (`analytics_events`) — `page_view` | `product_click` | `sim_start` | `sim_step` | `sim_submit`; anonymous `visitorId` cookie `kia_fp_vid`
 - `Lead.hyundaiGoLiveAt` — first time monitoring shows Contract Activation completed
 - Admin Visitor Analytics (`app/(back-office)/admin/analytics/page.tsx`) — traffic, product clicks, funnel, three conversion ratios
+- Page-builder `download` widget — same as HCFI: public view is a centered wrap of PDF icons (`IconFileTypePdf` red) with captions. Editor list (max 10) via `DownloadWidgetFields`. `MediaPicker` `kind="document"` `multiple` for library PDFs. Upload stores PDF as-is under `kia_media/` (not `hcfi_media`). Payload: `files: DownloadFileItem[]`.
 
 ## Patterns
 
