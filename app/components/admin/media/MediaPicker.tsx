@@ -2,82 +2,173 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
-import { IconPhoto, IconUpload, IconX } from '@tabler/icons-react';
+import { IconFileTypePdf, IconPhoto, IconUpload, IconX } from '@tabler/icons-react';
+import { filterMediaByKind, type MediaKind } from '@/lib/media-kind';
 
 export type Media = {
   id: string;
   filename: string;
   url: string;
   cloudinaryId: string | null;
+  mimeType?: string | null;
   width: number | null;
   height: number | null;
 };
 
 type MediaPickerProps = {
-  onSelect: (media: Media | null) => void;
-  /** Current image URL - used to highlight selected item in gallery */
+  onSelect?: (media: Media | null) => void;
+  /** When `multiple`, confirm sends the checked library items. */
+  onSelectMany?: (media: Media[]) => void;
+  /** Current URL - used to highlight selected item */
   value?: string | null;
+  /** URLs already attached (pre-check in multiple document mode). */
+  values?: string[];
   currentMediaId?: string | null;
   compact?: boolean;
+  /** Images (default) or PDFs for the download widget. */
+  kind?: MediaKind;
+  /** Document picker can attach several library files at once. */
+  multiple?: boolean;
+  maxSelected?: number;
 };
 
-export function MediaPicker({ onSelect, value, currentMediaId, compact = true }: MediaPickerProps) {
+export function MediaPicker({
+  onSelect,
+  onSelectMany,
+  value,
+  values,
+  currentMediaId,
+  compact = true,
+  kind = 'image',
+  multiple = false,
+  maxSelected,
+}: MediaPickerProps) {
   const [open, setOpen] = useState(false);
   const [media, setMedia] = useState<Media[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const seededRef = useRef(false);
+  const isDocument = kind === 'document';
+  const canMulti = multiple && isDocument;
 
   const loadMedia = useCallback(() => {
     setLoading(true);
     fetch('/api/admin/media')
       .then((res) => res.json())
-      .then((data) => setMedia(data.media || []))
+      .then((data) => {
+        const rows = (data.media || []) as Media[];
+        setMedia(filterMediaByKind(rows, kind));
+      })
       .catch(() => setMedia([]))
       .finally(() => setLoading(false));
-  }, []);
+  }, [kind]);
 
   useEffect(() => {
     if (open) {
       loadMedia();
       setUploadError(null);
+    } else {
+      seededRef.current = false;
+      setSelectedIds([]);
     }
   }, [open, loadMedia]);
 
+  useEffect(() => {
+    if (!open || !canMulti || seededRef.current || loading) return;
+    const urls = new Set(
+      [...(values ?? []), value].filter((url): url is string => !!url && url.trim().length > 0)
+    );
+    setSelectedIds(media.filter((item) => urls.has(item.url)).map((item) => item.id));
+    seededRef.current = true;
+  }, [open, canMulti, loading, media, values, value]);
+
+  const isChosen = (item: Media) =>
+    canMulti
+      ? selectedIds.includes(item.id)
+      : currentMediaId === item.id || value === item.url;
+
+  const toggleSelected = (item: Media) => {
+    setSelectedIds((current) => {
+      if (current.includes(item.id)) return current.filter((id) => id !== item.id);
+      if (maxSelected && current.length >= maxSelected) return current;
+      return [...current, item.id];
+    });
+  };
+
   const handleSelect = (item: Media) => {
-    onSelect(item);
+    if (canMulti) {
+      toggleSelected(item);
+      return;
+    }
+    onSelect?.(item);
+    setOpen(false);
+  };
+
+  const handleConfirmMany = () => {
+    const selected = media.filter((item) => selectedIds.includes(item.id));
+    onSelectMany?.(selected);
     setOpen(false);
   };
 
   const handleClear = () => {
-    onSelect(null);
+    if (canMulti) {
+      setSelectedIds([]);
+      return;
+    }
+    onSelect?.(null);
     setOpen(false);
   };
 
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadError(null);
-    setUploading(true);
+  const uploadFile = async (file: File): Promise<Media> => {
     const formData = new FormData();
     formData.append('file', file);
-    fetch('/api/admin/media/upload', { method: 'POST', body: formData })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.error) throw new Error(data.error);
-        loadMedia();
-        if (data.media) {
-          onSelect(data.media);
-          setOpen(false);
-        }
-      })
+    const res = await fetch('/api/admin/media/upload', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    if (!data.media) throw new Error('Gagal upload');
+    return data.media as Media;
+  };
+
+  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const list = Array.from(e.target.files ?? []);
+    if (list.length === 0) return;
+    setUploadError(null);
+    setUploading(true);
+    (async () => {
+      const uploaded: Media[] = [];
+      for (const file of list) {
+        uploaded.push(await uploadFile(file));
+      }
+      loadMedia();
+      if (canMulti) {
+        setSelectedIds((current) => [
+          ...current,
+          ...uploaded.map((item) => item.id).filter((id) => !current.includes(id)),
+        ]);
+      } else if (uploaded[0]) {
+        onSelect?.(uploaded[0]);
+        setOpen(false);
+      }
+    })()
       .catch((err) => setUploadError(err?.message ?? 'Gagal upload'))
       .finally(() => {
         setUploading(false);
         e.target.value = '';
       });
   };
+
+  const title = canMulti ? 'Pilih PDF' : isDocument ? 'Pilih PDF' : 'Pilih gambar';
+  const uploadLabel = uploading
+    ? 'Mengunggah...'
+    : isDocument
+      ? 'Upload PDF baru'
+      : 'Upload gambar baru';
+  const emptyHint = isDocument
+    ? 'Belum ada PDF. Upload file untuk menambah, atau gunakan URL manual di field di sebelah.'
+    : 'Belum ada gambar. Upload file untuk menambah, atau gunakan URL manual di field di sebelah.';
 
   return (
     <>
@@ -87,10 +178,16 @@ export function MediaPicker({ onSelect, value, currentMediaId, compact = true }:
         className={`inline-flex items-center justify-center rounded-lg border-2 border-gray-300 hover:border-[#008AEC] hover:bg-gray-50 transition-colors shrink-0 ${
           compact ? 'h-10 w-10' : 'h-10 px-3 gap-2'
         }`}
-        title="Pilih atau upload gambar"
+        title={title}
       >
-        <IconPhoto size={20} className="text-gray-600" />
-        {!compact && <span className="text-sm font-medium text-gray-700">Pilih gambar</span>}
+        {isDocument ? (
+          <IconFileTypePdf size={20} className="text-gray-600" />
+        ) : (
+          <IconPhoto size={20} className="text-gray-600" />
+        )}
+        {!compact && (
+          <span className="text-sm font-medium text-gray-700">{title}</span>
+        )}
       </button>
 
       {open && (
@@ -111,7 +208,7 @@ export function MediaPicker({ onSelect, value, currentMediaId, compact = true }:
           >
             <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
               <h2 id="media-picker-title" className="text-lg font-semibold text-gray-900">
-                Pilih gambar
+                {title}
               </h2>
               <button
                 type="button"
@@ -123,15 +220,15 @@ export function MediaPicker({ onSelect, value, currentMediaId, compact = true }:
               </button>
             </div>
 
-            {/* Upload area */}
             <div className="border-b border-gray-200 px-4 py-3 bg-gray-50">
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept={isDocument ? 'application/pdf,.pdf' : 'image/*'}
                 className="hidden"
                 onChange={handleUpload}
                 disabled={uploading}
+                multiple={canMulti}
               />
               <div className="flex flex-wrap items-center gap-3">
                 <button
@@ -141,29 +238,66 @@ export function MediaPicker({ onSelect, value, currentMediaId, compact = true }:
                   className="inline-flex items-center gap-2 px-4 py-2 bg-[#008AEC] text-white rounded-lg hover:bg-[#0077d1] transition-colors disabled:opacity-50 text-sm font-medium"
                 >
                   <IconUpload size={18} />
-                  {uploading ? 'Mengunggah...' : 'Upload gambar baru'}
+                  {uploadLabel}
                 </button>
                 <button
                   type="button"
                   onClick={handleClear}
                   className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors text-sm"
                 >
-                  Hapus pilihan
+                  {canMulti ? 'Hapus centang' : 'Hapus pilihan'}
                 </button>
               </div>
+              {canMulti && (
+                <p className="mt-2 text-xs text-gray-500">
+                  Ini daftar library media. Centang PDF yang mau dipakai di widget, lalu klik Pilih.
+                </p>
+              )}
               {uploadError && (
                 <p className="mt-2 text-sm text-red-600">{uploadError}</p>
               )}
             </div>
 
-            {/* Gallery grid */}
             <div className="flex-1 overflow-y-auto p-4">
               {loading ? (
                 <div className="text-center py-12 text-gray-500">Memuat media...</div>
               ) : media.length === 0 ? (
                 <div className="text-center py-12 text-gray-500 rounded-lg border-2 border-dashed border-gray-200">
-                  Belum ada gambar. Upload file untuk menambah, atau gunakan URL manual di field di sebelah.
+                  {emptyHint}
                 </div>
+              ) : isDocument ? (
+                <ul className="space-y-2">
+                  {media.map((item) => {
+                    const selected = isChosen(item);
+                    return (
+                      <li key={item.id} className="min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => handleSelect(item)}
+                          className={`flex w-full min-w-0 items-center gap-3 rounded-lg border-2 px-3 py-2.5 text-left transition-all hover:border-[#008AEC]/50 ${
+                            selected
+                              ? 'border-[#008AEC] bg-[#008AEC]/5'
+                              : 'border-gray-200 bg-white'
+                          }`}
+                        >
+                          {canMulti && (
+                            <input
+                              type="checkbox"
+                              checked={selected}
+                              readOnly
+                              tabIndex={-1}
+                              className="shrink-0 rounded border-gray-300"
+                            />
+                          )}
+                          <IconFileTypePdf size={22} className="shrink-0 text-red-600" />
+                          <span className="min-w-0 truncate text-sm font-medium text-gray-900" title={item.filename}>
+                            {item.filename}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                   {media.map((item) => (
@@ -195,6 +329,26 @@ export function MediaPicker({ onSelect, value, currentMediaId, compact = true }:
                 </div>
               )}
             </div>
+
+            {canMulti && (
+              <div className="flex items-center justify-end gap-2 border-t border-gray-200 px-4 py-3">
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmMany}
+                  disabled={selectedIds.length === 0}
+                  className="rounded-lg bg-[#008AEC] px-4 py-2 text-sm font-medium text-white hover:bg-[#0077d1] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Pilih {selectedIds.length} PDF
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
