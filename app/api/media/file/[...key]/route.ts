@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isLocalMediaStorageEnabled } from '@/lib/media-storage-mode';
 import { readLocalMediaFile } from '@/lib/local-media-storage';
+import { contentDispositionFilename, mediaContentTypeFromKey } from '@/lib/media-kind';
 import { getS3Bucket } from '@/lib/s3-client';
 import { streamS3ObjectAsResponse } from '@/lib/s3-stream';
 import { isMediaS3Key } from '@/lib/s3-url';
@@ -8,7 +9,7 @@ import { isMediaS3Key } from '@/lib/s3-url';
 /**
  * Public proxy for CMS media stored in private S3.
  *
- * Browser → GET /api/media/file/hcfi_media/<uuid>.webp
+ * Browser → GET /api/media/file/kia_media/<uuid>.webp
  *        → EC2 (inside VPC) → GetObject via VPC endpoint
  *        → stream bytes back to browser
  *
@@ -16,7 +17,7 @@ import { isMediaS3Key } from '@/lib/s3-url';
  * the *only* way browsers (outside VPC) can read these objects.
  *
  * Security:
- *  - Allow-listed to `hcfi_media/` prefix. KTP (`hcfi_leads_ktp/`) and any
+ *  - Allow-listed to `kia_media/` prefix. KTP (`kia_leads_ktp/` or local KTP) and any
  *    other prefix is rejected — KTP has its own authenticated endpoint.
  *  - No traversal (`..`) and bounded length via `isMediaS3Key`.
  */
@@ -24,7 +25,7 @@ import { isMediaS3Key } from '@/lib/s3-url';
 export const dynamic = 'force-dynamic';
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ key: string[] }> }
 ) {
   const { key: keySegments } = await params;
@@ -37,6 +38,12 @@ export async function GET(
     return NextResponse.json({ error: 'Invalid media key' }, { status: 400 });
   }
 
+  const asDownload = request.nextUrl.searchParams.get('download') === '1';
+  const contentDisposition = asDownload
+    ? `attachment; filename="${contentDispositionFilename(key)}"`
+    : undefined;
+  const contentType = mediaContentTypeFromKey(key);
+
   if (isLocalMediaStorageEnabled()) {
     try {
       const { buffer, contentType } = await readLocalMediaFile(key);
@@ -45,6 +52,7 @@ export async function GET(
         headers: {
           'Content-Type': contentType,
           'Cache-Control': 'public, max-age=31536000, immutable',
+          ...(contentDisposition ? { 'Content-Disposition': contentDisposition } : {}),
         },
       });
     } catch {
@@ -63,6 +71,7 @@ export async function GET(
     bucket,
     key,
     cacheControl: 'public, max-age=31536000, immutable',
-    fallbackContentType: 'image/webp',
+    fallbackContentType: contentType,
+    contentDisposition,
   });
 }

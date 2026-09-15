@@ -1,5 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
+import { mediaContentTypeFromKey } from '@/lib/media-kind';
 import { isMediaS3Key } from '@/lib/s3-url';
 
 const DATA_ROOT = path.join(process.cwd(), '.data');
@@ -32,5 +33,5 @@ export async function readLocalMediaFile(key: string): Promise<{
 }> {
   const filePath = getLocalMediaAbsolutePath(key);
   const buffer = await fs.readFile(filePath);
-  return { buffer, contentType: 'image/webp' };
+  return { buffer, contentType: mediaContentTypeFromKey(key) };
 }

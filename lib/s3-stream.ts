@@ -24,6 +24,8 @@ export type StreamS3ObjectOptions = {
   cacheControl?: string;
   /** Fallback Content-Type if S3 object has none. */
   fallbackContentType?: string;
+  /** Optional Content-Disposition (e.g. attachment for PDF download). */
+  contentDisposition?: string;
 };
 
 /**
@@ -52,6 +54,9 @@ export async function streamS3ObjectAsResponse(
       headers: {
         'Content-Type': out.ContentType ?? fallbackContentType,
         'Cache-Control': cacheControl,
+        ...(opts.contentDisposition
+          ? { 'Content-Disposition': opts.contentDisposition }
+          : {}),
         ...(out.ETag ? { ETag: out.ETag } : {}),
       },
     });
