@@ -1,11 +1,12 @@
 'use client';
 
-import type { PageLayout, LayoutCell, WidgetType, CtaWidgetPayload } from '@/app/types';
+import type { PageLayout, LayoutCell, WidgetType, CtaWidgetPayload, DownloadWidgetPayload } from '@/app/types';
 import { createEmptyCell, createEmptyRow } from '@/lib/layout-builder-utils';
 import { MediaPicker } from '@/app/components/admin/media/MediaPicker';
 import { TextSettingsFields } from '@/app/components/admin/pages/TextSettingsFields';
 import RichTextEditor from '@/app/components/ui/RichTextEditor';
 import { CtaWidgetFields } from '@/app/components/admin/pages/CtaWidgetFields';
+import { DownloadWidgetFields } from '@/app/components/admin/pages/DownloadWidgetFields';
 
 type LayoutBuilderSectionProps = {
   layout: PageLayout;
@@ -201,6 +202,7 @@ export function LayoutBuilderSection({ layout, setLayout }: LayoutBuilderSection
                   <option value="text">Text</option>
                   <option value="rich_text">Rich Text</option>
                   <option value="cta">CTA Buttons</option>
+                  <option value="download">Download PDF</option>
                   <option value="text_image">Text + Image</option>
                 </select>
                 {cell.widgetType === 'text' && (
@@ -345,6 +347,17 @@ export function LayoutBuilderSection({ layout, setLayout }: LayoutBuilderSection
                       gap: cell.payload?.gap as CtaWidgetPayload['gap'],
                       fullWidth: cell.payload?.fullWidth as boolean | undefined,
                     }}
+                    onChange={(patch) =>
+                      setCellPayload(rowIndex, cellIndex, {
+                        ...cell.payload,
+                        ...patch,
+                      })
+                    }
+                  />
+                )}
+                {cell.widgetType === 'download' && (
+                  <DownloadWidgetFields
+                    value={cell.payload as Partial<DownloadWidgetPayload>}
                     onChange={(patch) =>
                       setCellPayload(rowIndex, cellIndex, {
                         ...cell.payload,

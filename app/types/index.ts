@@ -57,7 +57,7 @@ export type CompanyInfo = {
 };
 
 // Static page layout (widget-based)
-export type WidgetType = 'text' | 'text_image' | 'rich_text' | 'cta';
+export type WidgetType = 'text' | 'text_image' | 'rich_text' | 'cta' | 'download';
 
 export type LayoutCell = {
   id: string;
@@ -128,6 +128,18 @@ export type CtaWidgetSettings = {
 
 export type CtaWidgetPayload = CtaWidgetSettings & {
   buttons: CtaButtonItem[];
+};
+
+export type DownloadFileItem = {
+  id: string;
+  title: string;
+  titleEn?: string;
+  fileUrl: string;
+  filename?: string;
+};
+
+export type DownloadWidgetPayload = {
+  files: DownloadFileItem[];
 };
 
 // Re-export credit simulation types

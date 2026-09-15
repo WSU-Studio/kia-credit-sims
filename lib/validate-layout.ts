@@ -2,7 +2,7 @@
  * Validasi struktur layout widget (digunakan Static Pages & Promos).
  */
 
-export const ALLOWED_WIDGET_TYPES = ['text', 'text_image', 'rich_text', 'cta'] as const;
+export const ALLOWED_WIDGET_TYPES = ['text', 'text_image', 'rich_text', 'cta', 'download'] as const;
 
 export function validateLayout(layout: unknown): boolean {
   if (layout === null || layout === undefined) return true;

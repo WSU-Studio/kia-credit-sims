@@ -73,9 +73,26 @@ function sanitizeCtaButtons(payload: Record<string, unknown>): void {
   });
 }
 
+function sanitizeDownloadFiles(payload: Record<string, unknown>): void {
+  if (Array.isArray(payload.files)) {
+    payload.files = payload.files.map((file) => {
+      if (!file || typeof file !== 'object') return file;
+      const next = { ...(file as Record<string, unknown>) };
+      if (typeof next.fileUrl === 'string') {
+        next.fileUrl = sanitizeHref(next.fileUrl) ?? '';
+      }
+      return next;
+    });
+  }
+  if (typeof payload.fileUrl === 'string') {
+    payload.fileUrl = sanitizeHref(payload.fileUrl) ?? '';
+  }
+}
+
 /**
  * Deep-sanitize HTML fields inside page-builder layout payloads
- * (`rich_text` / any cell with content|contentEn) and CTA button URLs.
+ * (`rich_text` / any cell with content|contentEn), CTA button URLs,
+ * and download widget file URLs (`files[].fileUrl` plus leftover `fileUrl`).
  */
 export function sanitizeLayoutHtml(layout: unknown): unknown {
   if (layout == null || typeof layout !== 'object') return layout;
@@ -100,6 +117,9 @@ export function sanitizeLayoutHtml(layout: unknown): unknown {
           }
           if (cell.widgetType === 'cta' || Array.isArray(payload.buttons)) {
             sanitizeCtaButtons(payload);
+          }
+          if (cell.widgetType === 'download' || Array.isArray(payload.files)) {
+            sanitizeDownloadFiles(payload);
           }
           return { ...cell, payload };
         }),
