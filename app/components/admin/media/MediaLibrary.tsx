@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
-import { IconUpload, IconCopy, IconCheck, IconLink, IconTrash } from '@tabler/icons-react';
+import { IconUpload, IconCopy, IconCheck, IconLink, IconTrash, IconFileTypePdf } from '@tabler/icons-react';
+import { isPdfMedia } from '@/lib/media-kind';
 
 type Media = {
   id: string;
@@ -154,7 +155,7 @@ export function MediaLibrary() {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept="image/*,application/pdf,.pdf"
             className="hidden"
             onChange={handleUploadFile}
             disabled={uploading}
@@ -184,7 +185,7 @@ export function MediaLibrary() {
         )}
         {addUrlOpen && (
           <form onSubmit={handleAddByUrl} className="p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
-            <p className="text-sm text-gray-600">Paste URL gambar untuk menambah ke Media Library.</p>
+            <p className="text-sm text-gray-600">Paste URL gambar atau PDF untuk menambah ke Media Library.</p>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">URL <span className="text-red-500">*</span></label>
               <input
@@ -239,14 +240,18 @@ export function MediaLibrary() {
               key={item.id}
               className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden relative group"
             >
-              <div className="aspect-video bg-gray-200 relative">
-                <Image
-                  src={item.url}
-                  alt={item.filename}
-                  fill
-                  className="object-contain"
-                  unoptimized
-                />
+              <div className="aspect-video bg-gray-200 relative flex items-center justify-center">
+                {isPdfMedia(item) ? (
+                  <IconFileTypePdf size={48} className="text-red-600" />
+                ) : (
+                  <Image
+                    src={item.url}
+                    alt={item.filename}
+                    fill
+                    className="object-contain"
+                    unoptimized
+                  />
+                )}
                 <button
                   type="button"
                   onClick={() => handleDelete(item)}
