@@ -34,6 +34,8 @@ export function createEmptyDownloadFile(): DownloadFileItem {
     id: generateId(),
     title: '',
     titleEn: '',
+    subtitle: '',
+    subtitleEn: '',
     fileUrl: '',
     filename: '',
   };
@@ -68,6 +70,8 @@ export function mergeSelectedDownloadMedia(
       id: existing?.id ?? generateId(),
       title: existing?.title.trim() ? existing.title : titleFromFilename(filename),
       titleEn: existing?.titleEn ?? '',
+      subtitle: existing?.subtitle ?? '',
+      subtitleEn: existing?.subtitleEn ?? '',
       fileUrl: url,
       filename: filename || existing?.filename || '',
     });
@@ -82,6 +86,8 @@ export function normalizeDownloadFiles(
   payload: Partial<DownloadWidgetPayload> & {
     title?: string;
     titleEn?: string;
+    subtitle?: string;
+    subtitleEn?: string;
     fileUrl?: string;
     filename?: string;
   } | null | undefined
@@ -94,6 +100,8 @@ export function normalizeDownloadFiles(
         id: typeof file.id === 'string' && file.id ? file.id : generateId(),
         title: typeof file.title === 'string' ? file.title : '',
         titleEn: typeof file.titleEn === 'string' ? file.titleEn : '',
+        subtitle: typeof file.subtitle === 'string' ? file.subtitle : '',
+        subtitleEn: typeof file.subtitleEn === 'string' ? file.subtitleEn : '',
         fileUrl: typeof file.fileUrl === 'string' ? file.fileUrl : '',
         filename: typeof file.filename === 'string' ? file.filename : '',
       }));
@@ -106,6 +114,8 @@ export function normalizeDownloadFiles(
       id: 'legacy-download',
       title,
       titleEn: typeof payload.titleEn === 'string' ? payload.titleEn : '',
+      subtitle: typeof payload.subtitle === 'string' ? payload.subtitle : '',
+      subtitleEn: typeof payload.subtitleEn === 'string' ? payload.subtitleEn : '',
       fileUrl,
       filename: typeof payload.filename === 'string' ? payload.filename : '',
     },

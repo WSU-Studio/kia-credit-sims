@@ -134,6 +134,8 @@ export type DownloadFileItem = {
   id: string;
   title: string;
   titleEn?: string;
+  subtitle?: string;
+  subtitleEn?: string;
   fileUrl: string;
   filename?: string;
 };

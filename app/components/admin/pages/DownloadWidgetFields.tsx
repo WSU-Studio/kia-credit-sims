@@ -121,6 +121,20 @@ export function DownloadWidgetFields({ value, onChange }: DownloadWidgetFieldsPr
             className="w-full min-w-0 px-2 py-1.5 border border-gray-300 rounded-b-lg"
             placeholder="Download title (EN)"
           />
+          <input
+            type="text"
+            value={file.subtitle ?? ''}
+            onChange={(e) => updateFile(index, { subtitle: e.target.value })}
+            className="w-full min-w-0 px-2 py-1.5 border border-gray-300 rounded-t-lg border-b-0"
+            placeholder="Subjudul (ID)"
+          />
+          <input
+            type="text"
+            value={file.subtitleEn ?? ''}
+            onChange={(e) => updateFile(index, { subtitleEn: e.target.value })}
+            className="w-full min-w-0 px-2 py-1.5 border border-gray-300 rounded-b-lg"
+            placeholder="Subtitle (EN)"
+          />
           <div className="flex gap-2 min-w-0">
             <input
               type="text"
