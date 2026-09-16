@@ -167,6 +167,17 @@ const nextConfig = {
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     unoptimized: false,
   },
+  webpack: (config) => {
+    config.experiments = {
+      ...config.experiments,
+      asyncWebAssembly: true,
+    };
+    config.module.rules.push({
+      test: /\.wasm$/,
+      type: 'asset/resource',
+    });
+    return config;
+  },
 };
 
 module.exports = withNextIntl(nextConfig);
