@@ -44,7 +44,7 @@ Fork of `hfci-credit-sims` for Hyundai Capital KIA financing. Engine (LOS Confin
 - `AnalyticsEvent` (`analytics_events`) — `page_view` | `product_click` | `sim_start` | `sim_step` | `sim_submit`; anonymous `visitorId` cookie `kia_fp_vid`
 - `Lead.hyundaiGoLiveAt` — first time monitoring shows Contract Activation completed
 - Admin Visitor Analytics (`app/(back-office)/admin/analytics/page.tsx`) — traffic, product clicks, funnel, three conversion ratios
-- Page-builder `download` widget — same as HCFI: public view is a centered wrap of PDF icons (`IconFileTypePdf` red) with captions. Editor list (max 10) via `DownloadWidgetFields`. `MediaPicker` `kind="document"` `multiple` for library PDFs. Upload stores PDF as-is under `kia_media/` (not `hcfi_media`). Payload: `files: DownloadFileItem[]`.
+- Page-builder `download` widget — same as HCFI: public 2-col cards with red PDF icon, title, optional subtitle, **Lihat PDF** (EmbedPDF dialog) and **Unduh**. `PdfViewer` / `PdfViewerDialog` (`app/components/ui/`) use `@embedpdf/react-pdf-viewer` with `worker: false`, local `pdfium.wasm`, `fontFallback: null` (CSP has no Google Fonts). Iframe fallback if EmbedPDF throws. Editor list (max 10) via `DownloadWidgetFields`. Payload: `files: DownloadFileItem[]` including `subtitle`/`subtitleEn`. `MediaPicker` `kind="document"` `multiple` fills `files[]`. Only items with a safe `fileUrl` render. Upload stores PDF as-is under `kia_media/` (not `hcfi_media`).
 
 ## Patterns
 
@@ -53,3 +53,4 @@ Fork of `hfci-credit-sims` for Hyundai Capital KIA financing. Engine (LOS Confin
 - Dealer/salesman login: password then email OTP when `USE_OTP=true`. Admin CMS skips OTP. Local without SMTP logs the code to the server console.
 - Pre-sim dual links: snapshot `/pre-sim/[slug]` vs live `/credit-simulation?promo=[slug]` — never mix submit onto the QR page
 - First-party analytics: public site only (ignore `/admin`, `/dealer`, `/auth`); DNT/bots dropped; no name/email/phone in events
+- CMS files: widgets store URLs, not blobs. Images and PDFs go through `/api/admin/media/upload` + `Media` table under `kia_media/`. `MediaPicker` `kind="image"` (default, single) or `kind="document"` (`multiple` for the download widget). Public PDF preview uses EmbedPDF (`PdfViewer` / `PdfViewerDialog`) with `worker: false` and local `pdfium.wasm`; iframe fallback if the viewer throws. CSP allows `'wasm-unsafe-eval'` for PDFium, not `'unsafe-eval'`.
