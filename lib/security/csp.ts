@@ -11,6 +11,7 @@
  * 'unsafe-eval' is intentionally omitted (SOC). Next.js production builds and
  * the admin shell do not require it. Local `next dev` HMR may need
  * CSP_ALLOW_UNSAFE_EVAL=true only as an escape hatch — never set on TQA/prod.
+ * `'wasm-unsafe-eval'` is required for EmbedPDF/PDFium (not the same as unsafe-eval).
  * Ideal follow-up: per-request nonce to drop script-src 'unsafe-inline'.
  */
 
@@ -21,6 +22,7 @@ const scriptSrc = [
   "'self'",
   "'unsafe-inline'",
   ...(allowUnsafeEval ? ["'unsafe-eval'"] : []),
+  "'wasm-unsafe-eval'",
   'https://www.googletagmanager.com',
   'https://www.google-analytics.com',
   'https://analytics.google.com',
