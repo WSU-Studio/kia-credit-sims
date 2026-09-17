@@ -6,6 +6,7 @@ import { jsPDF } from 'jspdf';
 import type { FinalSummaryInfo } from '@/app/types/credit-simulation';
 import { IconX, IconDownload, IconLoader2 } from '@tabler/icons-react';
 import { SimulationRetryError } from '@/app/components/simulation/SimulationRetryError';
+import { resolveCustomerFeeBreakdown } from '@/lib/lead-summary-snapshot';
 
 type LetterheadData = {
   name: string;
@@ -84,6 +85,55 @@ function formatCreatedAt(
   });
 }
 
+function CustomerFeeBreakdownRows({
+  summary,
+  feePaidByCustomer,
+  formatRp,
+  t,
+}: {
+  summary: FinalSummaryInfo;
+  feePaidByCustomer: number;
+  formatRp: (n: number) => string;
+  t: (key: string) => string;
+}) {
+  const fees = resolveCustomerFeeBreakdown(summary);
+  const showAdmin = fees.adminFeeAmt > 0;
+  const showProvision = fees.provisionFeeAmt > 0 || fees.provisionFeePrcnt > 0;
+  const showFiducia = fees.fiduciaFeeAmt > 0;
+  return (
+    <>
+      {showAdmin ? (
+        <>
+          <dt className="text-gray-500">{t('summaryAdminFeeLabel')}</dt>
+          <dd className="font-medium text-gray-900">{formatRp(fees.adminFeeAmt)}</dd>
+        </>
+      ) : null}
+      {showProvision ? (
+        <>
+          <dt className="text-gray-500">{t('summaryProvisionLabel')}</dt>
+          <dd className="font-medium text-gray-900">
+            {formatRp(fees.provisionFeeAmt)}
+            {fees.provisionFeePrcnt > 0 ? ` (${fees.provisionFeePrcnt}%)` : ''}
+          </dd>
+        </>
+      ) : null}
+      {showFiducia ? (
+        <>
+          <dt className="text-gray-500">{t('summaryFiduciaLabel')}</dt>
+          <dd className="font-medium text-gray-900">{formatRp(fees.fiduciaFeeAmt)}</dd>
+        </>
+      ) : null}
+      <dt className="text-gray-500">{t('summaryFeePaidByCustomerLabel')}</dt>
+      <dd className="font-semibold text-gray-900">
+        <span className="block">{formatRp(feePaidByCustomer)}</span>
+        <span className="mt-0.5 block text-xs font-normal text-gray-500">
+          {t('summaryFeePaidByCustomerHint')}
+        </span>
+      </dd>
+    </>
+  );
+}
+
 export function SimulationSummaryModal({
   open,
   onClose,
@@ -153,6 +203,7 @@ export function SimulationSummaryModal({
   const subsidyAmt = 0;
   const assetInsurancePaid = summary?.assetInsPaidAmt ?? 0;
   const feePaidByCustomer = summary?.feePaidAmt ?? 0;
+  const customerFees = summary ? resolveCustomerFeeBreakdown(summary) : null;
   const balloonAmt = Number(summary?.balloonAmt) || 0;
   const showBalloonAmt = balloonAmt > 0;
 
@@ -249,19 +300,25 @@ export function SimulationSummaryModal({
     doc.text(`${t('summaryDownPaymentLabel')}: ${formatRp(summary.downPaymentAmt)}`, left, (y += 5));
     doc.text(`${t('summaryInstallmentAmountLabel')}: ${formatRp(summary.instAmt)}`, left, (y += 5));
     doc.text(`${t('summaryAssetInsurancePaidLabel')}: ${formatRp(assetInsurancePaid)}`, left, (y += 5));
-    doc.text(`${t('summaryFeePaidByCustomerLabel')}: ${formatRp(feePaidByCustomer)}`, left, (y += 5));
-    if (
-      (summary.provisionFeeAmt != null && summary.provisionFeeAmt > 0) ||
-      (summary.provisionFeePrcnt != null && summary.provisionFeePrcnt > 0)
-    ) {
-      const pct =
-        summary.provisionFeePrcnt != null ? ` (${summary.provisionFeePrcnt}%)` : '';
+    if (customerFees && customerFees.adminFeeAmt > 0) {
+      doc.text(`${t('summaryAdminFeeLabel')}: ${formatRp(customerFees.adminFeeAmt)}`, left, (y += 5));
+    }
+    if (customerFees && (customerFees.provisionFeeAmt > 0 || customerFees.provisionFeePrcnt > 0)) {
+      const pct = customerFees.provisionFeePrcnt > 0 ? ` (${customerFees.provisionFeePrcnt}%)` : '';
       doc.text(
-        `${t('summaryProvisionLabel')}: ${formatRp(summary.provisionFeeAmt ?? 0)}${pct}`,
+        `${t('summaryProvisionLabel')}: ${formatRp(customerFees.provisionFeeAmt)}${pct}`,
         left,
         (y += 5)
       );
     }
+    if (customerFees && customerFees.fiduciaFeeAmt > 0) {
+      doc.text(`${t('summaryFiduciaLabel')}: ${formatRp(customerFees.fiduciaFeeAmt)}`, left, (y += 5));
+    }
+    doc.text(`${t('summaryFeePaidByCustomerLabel')}: ${formatRp(feePaidByCustomer)}`, left, (y += 5));
+    doc.setFontSize(9);
+    doc.text(t('summaryFeePaidByCustomerHint'), left, (y += 4));
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
     doc.text(`${t('summarySubsidyAmountLabel')}: (${formatRp(subsidyAmt)})`, left, (y += 5));
     doc.text(`${t('summaryTotalDownPaymentLabel')}: ${formatRp(summary.totalDownPaymentAmt)}`, left, (y += 5));
     y += 8;
@@ -436,20 +493,12 @@ export function SimulationSummaryModal({
                   <dd className="font-medium text-gray-900">{formatRp(summary.instAmt)}</dd>
                   <dt className="text-gray-500">{t('summaryAssetInsurancePaidLabel')}</dt>
                   <dd className="font-medium text-gray-900">{formatRp(assetInsurancePaid)}</dd>
-                  <dt className="text-gray-500">{t('summaryFeePaidByCustomerLabel')}</dt>
-                  <dd className="font-medium text-gray-900">{formatRp(feePaidByCustomer)}</dd>
-                  {(summary.provisionFeeAmt != null && summary.provisionFeeAmt > 0) ||
-                  (summary.provisionFeePrcnt != null && summary.provisionFeePrcnt > 0) ? (
-                    <>
-                      <dt className="text-gray-500">{t('summaryProvisionLabel')}</dt>
-                      <dd className="font-medium text-gray-900">
-                        {formatRp(summary.provisionFeeAmt ?? 0)}
-                        {summary.provisionFeePrcnt != null
-                          ? ` (${summary.provisionFeePrcnt}%)`
-                          : ''}
-                      </dd>
-                    </>
-                  ) : null}
+                  <CustomerFeeBreakdownRows
+                    summary={summary}
+                    feePaidByCustomer={feePaidByCustomer}
+                    formatRp={formatRp}
+                    t={t}
+                  />
                   <dt className="text-gray-500">{t('summarySubsidyAmountLabel')}</dt>
                   <dd className="font-medium text-gray-900">({formatRp(subsidyAmt)})</dd>
                   <dt className="text-gray-500">{t('summaryTotalDownPaymentLabel')}</dt>
