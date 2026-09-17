@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import {
   IconChartBar,
   IconClick,
@@ -77,8 +77,15 @@ export function AnalyticsDashboard() {
   }, []);
 
   useEffect(() => {
-    void fetchSummary(appliedFrom, appliedTo);
-  }, [appliedFrom, appliedTo, fetchSummary]);
+    void fetchSummary(defaults.from, defaults.to);
+  }, [defaults.from, defaults.to, fetchSummary]);
+
+  function handleApply(event: FormEvent) {
+    event.preventDefault();
+    setAppliedFrom(from);
+    setAppliedTo(to);
+    void fetchSummary(from, to);
+  }
 
   async function handleSyncGoLive() {
     setSyncing(true);
@@ -111,11 +118,7 @@ export function AnalyticsDashboard() {
     <div className="space-y-6">
       <form
         className="flex flex-wrap items-end gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
-        onSubmit={(e) => {
-          e.preventDefault();
-          setAppliedFrom(from);
-          setAppliedTo(to);
-        }}
+        onSubmit={handleApply}
       >
         <label className="flex flex-col gap-1 text-sm text-gray-600">
           Dari
@@ -123,7 +126,7 @@ export function AnalyticsDashboard() {
             type="date"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-gray-900"
+            className="rounded-lg border border-gray-300 px-3 py-2 text-gray-900 cursor-pointer"
           />
         </label>
         <label className="flex flex-col gap-1 text-sm text-gray-600">
@@ -132,12 +135,13 @@ export function AnalyticsDashboard() {
             type="date"
             value={to}
             onChange={(e) => setTo(e.target.value)}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-gray-900"
+            className="rounded-lg border border-gray-300 px-3 py-2 text-gray-900 cursor-pointer"
           />
         </label>
         <button
           type="submit"
-          className="rounded-lg bg-[#002c5f] px-4 py-2 text-sm font-medium text-white hover:bg-[#003d7a]"
+          disabled={loading}
+          className="rounded-lg bg-[#002c5f] px-4 py-2 text-sm font-medium text-white hover:bg-[#003d7a] cursor-pointer disabled:opacity-60"
         >
           Terapkan
         </button>
@@ -145,7 +149,7 @@ export function AnalyticsDashboard() {
           type="button"
           onClick={() => void handleSyncGoLive()}
           disabled={syncing}
-          className="inline-flex items-center gap-2 rounded-lg border border-[#002c5f] px-4 py-2 text-sm font-medium text-[#002c5f] hover:bg-slate-50 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-lg border border-[#002c5f] px-4 py-2 text-sm font-medium text-[#002c5f] hover:bg-slate-50 disabled:opacity-60 cursor-pointer"
         >
           <IconRefresh className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
           Sinkron go-live
