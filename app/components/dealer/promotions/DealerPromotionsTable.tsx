@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { DealerLink } from '@/app/components/dealer/DealerLink';
-import { IconEdit, IconTrash, IconPlus } from '@tabler/icons-react';
+import { IconEdit, IconPlus, IconSearch, IconTrash } from '@tabler/icons-react';
+import { TablePagination } from '@/app/components/admin/TablePagination';
 import {
   DISCOUNT_TYPES,
   formatDiscountLabel,
@@ -25,13 +26,25 @@ type Promotion = {
 
 const formatDate = (iso: string | null) => {
   if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('id-ID', { dateStyle: 'medium' });
+  return new Date(iso).toLocaleDateString('id-ID', {
+    dateStyle: 'medium',
+    timeZone: 'Asia/Jakarta',
+  });
 };
+
+function matchesModelSearch(promo: Promotion, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return (promo.assetName ?? '').toLowerCase().includes(q);
+}
 
 export function DealerPromotionsTable() {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const loadPromotions = () =>
     fetch('/api/dealer/promotions')
@@ -41,6 +54,20 @@ export function DealerPromotionsTable() {
   useEffect(() => {
     loadPromotions().finally(() => setLoading(false));
   }, []);
+
+  const filtered = useMemo(
+    () => promotions.filter((promo) => matchesModelSearch(promo, search)),
+    [promotions, search]
+  );
+
+  const totalItems = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paginated = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
 
   const handleDelete = async (promo: Promotion) => {
     if (
@@ -87,9 +114,32 @@ export function DealerPromotionsTable() {
         </DealerLink>
       </div>
 
+      {promotions.length > 0 && (
+        <div className="px-6 py-3 border-b border-gray-200 flex flex-wrap items-center gap-3">
+          <label className="relative min-w-0 flex-1">
+            <span className="sr-only">Cari model</span>
+            <IconSearch
+              size={16}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            />
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Cari nama model..."
+              className="h-9 w-full min-w-0 rounded-lg border border-gray-300 bg-white pl-9 pr-3 text-sm text-gray-800 outline-none focus:border-blue-950 focus:ring-2 focus:ring-blue-950/20"
+            />
+          </label>
+        </div>
+      )}
+
       {promotions.length === 0 ? (
         <div className="px-6 py-12 text-center text-gray-500 text-sm">
           Belum ada promo diskon. Tambahkan promo per model mobil.
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="px-6 py-12 text-center text-gray-500 text-sm">
+          Tidak ada promo yang cocok dengan pencarian.
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -114,7 +164,7 @@ export function DealerPromotionsTable() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {promotions.map((promo) => {
+              {paginated.map((promo) => {
                 const live = isPromotionCurrentlyValid({
                   isActive: promo.isActive,
                   validFrom: promo.validFrom ? new Date(promo.validFrom) : null,
@@ -126,9 +176,6 @@ export function DealerPromotionsTable() {
                     <td className="px-4 py-3">
                       <div className="text-sm font-medium text-gray-900">
                         {promo.assetName ?? promo.assetCode}
-                      </div>
-                      <div className="text-xs text-gray-400 font-mono">
-                        {promo.assetCode}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-700">
@@ -182,6 +229,20 @@ export function DealerPromotionsTable() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {promotions.length > 0 && (
+        <TablePagination
+          page={safePage}
+          pageSize={pageSize}
+          totalItems={totalItems}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPage(1);
+            setPageSize(size);
+          }}
+          allowAll
+        />
       )}
     </div>
   );
