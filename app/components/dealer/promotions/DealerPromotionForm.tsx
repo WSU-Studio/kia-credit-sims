@@ -8,6 +8,7 @@ import {
   DISCOUNT_TYPES,
   MAX_DISCOUNT_PERCENT,
   formatIdr,
+  toJakartaYmd,
 } from '@/lib/dealer-promotion';
 
 type DealerPromotionFormProps = {
@@ -18,7 +19,7 @@ function toDateInput(d: string | null | undefined): string {
   if (!d) return '';
   const date = new Date(d);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toISOString().slice(0, 16);
+  return toJakartaYmd(date);
 }
 
 export function DealerPromotionForm({ promotionId }: DealerPromotionFormProps) {
@@ -278,11 +279,12 @@ export function DealerPromotionForm({ promotionId }: DealerPromotionFormProps) {
           </label>
           <input
             id="validFrom"
-            type="datetime-local"
+            type="date"
             value={validFrom}
             onChange={(e) => setValidFrom(e.target.value)}
             className="w-full px-3 h-11 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-950"
           />
+          <p className="mt-1 text-xs text-gray-500">Termasuk tanggal ini (WIB).</p>
         </div>
         <div>
           <label htmlFor="validTo" className="block text-sm font-medium text-gray-700 mb-1">
@@ -290,11 +292,12 @@ export function DealerPromotionForm({ promotionId }: DealerPromotionFormProps) {
           </label>
           <input
             id="validTo"
-            type="datetime-local"
+            type="date"
             value={validTo}
             onChange={(e) => setValidTo(e.target.value)}
             className="w-full px-3 h-11 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-950"
           />
+          <p className="mt-1 text-xs text-gray-500">Termasuk tanggal ini sampai akhir hari (WIB).</p>
         </div>
       </div>
 

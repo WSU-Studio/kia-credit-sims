@@ -23,13 +23,69 @@ export type DealerPromotionRecord = {
   notes: string | null;
 };
 
+const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const DATETIME_LOCAL_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/;
+const JAKARTA_OFFSET = '+07:00';
+const JAKARTA_TZ = 'Asia/Jakarta';
+
+/** Calendar date in WIB (YYYY-MM-DD). Promo periods are inclusive days, not UTC instants. */
+export function toJakartaYmd(d: Date): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: JAKARTA_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d);
+}
+
+function hasExplicitOffset(value: string): boolean {
+  return /[zZ]$/.test(value) || /[+-]\d{2}:\d{2}$/.test(value);
+}
+
+/**
+ * Parse a form date. Date-only and datetime-local (no zone) are Asia/Jakarta.
+ * validTo on a calendar day includes the whole WIB day (through 23:59:59.999).
+ */
+export function parsePromotionDateBound(
+  value: string | null | undefined,
+  bound: 'start' | 'end'
+): Date | null {
+  if (!value) return null;
+  const raw = value.trim();
+  if (!raw) return null;
+
+  if (DATE_ONLY_RE.test(raw)) {
+    const time = bound === 'start' ? '00:00:00.000' : '23:59:59.999';
+    const parsed = new Date(`${raw}T${time}${JAKARTA_OFFSET}`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  if (DATETIME_LOCAL_RE.test(raw) && !hasExplicitOffset(raw)) {
+    const day = raw.slice(0, 10);
+    const clock = raw.slice(11);
+    const isMidnight =
+      clock === '00:00' || clock === '00:00:00' || clock === '00:00:00.000';
+    if (bound === 'end' && isMidnight) {
+      const parsed = new Date(`${day}T23:59:59.999${JAKARTA_OFFSET}`);
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+    const withSeconds = raw.length === 16 ? `${raw}:00` : raw;
+    const parsed = new Date(`${withSeconds}${JAKARTA_OFFSET}`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 export function isPromotionCurrentlyValid(
   promo: Pick<DealerPromotionRecord, 'isActive' | 'validFrom' | 'validTo'>,
   at: Date = new Date()
 ): boolean {
   if (!promo.isActive) return false;
-  if (promo.validFrom && at < promo.validFrom) return false;
-  if (promo.validTo && at > promo.validTo) return false;
+  const today = toJakartaYmd(at);
+  if (promo.validFrom && today < toJakartaYmd(promo.validFrom)) return false;
+  if (promo.validTo && today > toJakartaYmd(promo.validTo)) return false;
   return true;
 }
 
@@ -126,16 +182,15 @@ export function parseDealerPromotionInput(
     maxDiscount = parsed;
   }
 
-  const parseDate = (key: string): Date | null => {
+  const parseDate = (key: string, bound: 'start' | 'end'): Date | null => {
     const v = body[key];
     if (v === undefined || v === null || v === '') return null;
     if (typeof v !== 'string') return null;
-    const d = new Date(v);
-    return Number.isNaN(d.getTime()) ? null : d;
+    return parsePromotionDateBound(v, bound);
   };
 
-  const validFrom = parseDate('validFrom');
-  const validTo = parseDate('validTo');
+  const validFrom = parseDate('validFrom', 'start');
+  const validTo = parseDate('validTo', 'end');
   if (validFrom && validTo && validFrom > validTo) {
     return { error: 'Tanggal mulai tidak boleh setelah tanggal berakhir' };
   }
@@ -162,13 +217,8 @@ export function toPromotionDates(input: DealerPromotionInput): {
   validFrom: Date | null;
   validTo: Date | null;
 } {
-  const parse = (v?: string | null) => {
-    if (!v) return null;
-    const d = new Date(v);
-    return Number.isNaN(d.getTime()) ? null : d;
-  };
   return {
-    validFrom: parse(input.validFrom),
-    validTo: parse(input.validTo),
+    validFrom: parsePromotionDateBound(input.validFrom, 'start'),
+    validTo: parsePromotionDateBound(input.validTo, 'end'),
   };
 }
