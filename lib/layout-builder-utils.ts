@@ -152,6 +152,8 @@ export function createEmptyCell(widgetType: WidgetType = 'text'): LayoutCell {
       widgetType: 'download',
       payload: {
         files: [createEmptyDownloadFile()],
+        align: 'center',
+        direction: 'row',
       },
     };
   }

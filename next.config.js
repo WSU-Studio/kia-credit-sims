@@ -168,10 +168,9 @@ const nextConfig = {
     unoptimized: false,
   },
   webpack: (config) => {
-    config.experiments = {
-      ...config.experiments,
-      asyncWebAssembly: true,
-    };
+    // Serve PDFium as a URL for EmbedPDF `wasmUrl`. Do not enable
+    // asyncWebAssembly — it marks client modules as Promises and breaks RSC
+    // (`Lazy element type must resolve to a class or function`).
     config.module.rules.push({
       test: /\.wasm$/,
       type: 'asset/resource',

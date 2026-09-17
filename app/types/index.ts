@@ -140,7 +140,12 @@ export type DownloadFileItem = {
   filename?: string;
 };
 
-export type DownloadWidgetPayload = {
+export type DownloadWidgetSettings = {
+  align?: 'left' | 'center' | 'right';
+  direction?: 'row' | 'column';
+};
+
+export type DownloadWidgetPayload = DownloadWidgetSettings & {
   files: DownloadFileItem[];
 };
 

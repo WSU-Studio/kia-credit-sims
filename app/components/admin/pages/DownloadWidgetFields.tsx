@@ -166,6 +166,43 @@ export function DownloadWidgetFields({ value, onChange }: DownloadWidgetFieldsPr
           />
         </div>
       ))}
+
+      <div className="space-y-3 border-t border-gray-200 pt-3">
+        <p className="text-xs font-medium text-gray-600">Pengaturan tampilan</p>
+        <p className="text-xs text-gray-500">
+          Layar kecil selalu tersusun vertikal. Perataan kiri, tengah, atau kanan mengikuti arah
+          tampilan.
+        </p>
+        <div className="grid grid-cols-2 gap-3 min-w-0">
+          <div className="min-w-0">
+            <label className="mb-1 block text-xs text-gray-500">Arah</label>
+            <select
+              value={value.direction ?? 'row'}
+              onChange={(e) =>
+                onChange({ direction: e.target.value as DownloadWidgetPayload['direction'] })
+              }
+              className="w-full min-w-0 rounded border border-gray-300 px-2 py-1.5"
+            >
+              <option value="row">Horizontal (baris)</option>
+              <option value="column">Vertikal (kolom)</option>
+            </select>
+          </div>
+          <div className="min-w-0">
+            <label className="mb-1 block text-xs text-gray-500">Perataan</label>
+            <select
+              value={value.align ?? 'center'}
+              onChange={(e) =>
+                onChange({ align: e.target.value as DownloadWidgetPayload['align'] })
+              }
+              className="w-full min-w-0 rounded border border-gray-300 px-2 py-1.5"
+            >
+              <option value="left">Kiri</option>
+              <option value="center">Tengah</option>
+              <option value="right">Kanan</option>
+            </select>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
