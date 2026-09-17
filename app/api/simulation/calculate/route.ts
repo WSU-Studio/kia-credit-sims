@@ -18,6 +18,7 @@ import {
   resolveIsPartner,
   responseMatchesPartnerCode,
 } from '@/lib/hyundai-partner';
+import { pickAdminFeeSource, readAdminFeeAmt, readAdminFeeBhv } from '@/lib/salesman-fee';
 import { getClientIp, simulationLimiter, tooManyRequestsResponse } from '@/lib/ratelimit';
 import {
   calculateBodySchema,
@@ -29,6 +30,10 @@ type ProductRow = {
   ProductName?: string;
   PartnerCode?: string | null;
   IsPartner?: boolean | string | null;
+  AdminFeeAmt?: unknown;
+  AdminFeeBhv?: unknown;
+  adminFeeAmt?: unknown;
+  adminFeeBhv?: unknown;
   [key: string]: unknown;
 };
 
@@ -45,6 +50,10 @@ type ProductNameRow = {
   DPPrcntBhv?: string;
   PartnerCode?: string | null;
   IsPartner?: boolean | string | null;
+  AdminFeeAmt?: number | string | null;
+  AdminFeeBhv?: string | null;
+  adminFeeAmt?: number | string | null;
+  adminFeeBhv?: string | null;
 };
 
 type ProductNameListResponse = {
@@ -84,6 +93,7 @@ function productNameKey(name: string | null | undefined): string {
 }
 
 function mapNameRowToProductStub(row: ProductNameRow): ProductRow {
+  const fee = pickAdminFeeSource(row, null);
   return {
     ProductCode: row.MrInstSchemeCode?.trim() || 'RF',
     ProductName: String(row.ProductName ?? '').trim(),
@@ -100,9 +110,9 @@ function mapNameRowToProductStub(row: ProductNameRow): ProductRow {
     BalloonAmt: 0,
     DefermentPeriod: 0,
     DefermentRatePrcnt: 0,
-    AdminFeeAmt: 0,
+    AdminFeeAmt: readAdminFeeAmt(fee),
     AdminFeeCptlz: false,
-    AdminFeeBhv: 'DEF',
+    AdminFeeBhv: readAdminFeeBhv(fee) || 'DEF',
     ProvisionType: 'PRCNT',
     ProvisionFee: 0,
     ProvisionFeeCptlz: false,
@@ -137,10 +147,13 @@ function mergeNameWithDetails(
       const key = productNameKey(nameRow.ProductName);
       const detail = detailByName.get(key);
       if (detail) {
+        const fee = pickAdminFeeSource(detail, nameRow);
         return {
           ...detail,
           PartnerCode: detail.PartnerCode ?? nameRow.PartnerCode ?? null,
           IsPartner: detail.IsPartner ?? nameRow.IsPartner ?? null,
+          AdminFeeAmt: readAdminFeeAmt(fee),
+          AdminFeeBhv: readAdminFeeBhv(fee) || 'DEF',
         };
       }
       return mapNameRowToProductStub(nameRow);

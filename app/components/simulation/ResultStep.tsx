@@ -15,7 +15,7 @@ import {
 import { ContactModal, type UserLocation } from '@/app/components/simulation/ContactModal';
 import { SimulationRetryError } from '@/app/components/simulation/SimulationRetryError';
 import { CustomerPaidFees } from '@/app/components/simulation/CustomerPaidFees';
-import { buildSummaryFromProductRow, withProvisionBreakdown } from '@/lib/lead-summary-snapshot';
+import { buildSummaryFromProductRow, withCustomerFeeBreakdown } from '@/lib/lead-summary-snapshot';
 import {
   getAvailableFirstInstallments,
   normalizeFirstInstallment,
@@ -23,15 +23,18 @@ import {
   type FirstInstallmentType,
 } from '@/lib/product-calculation-rows';
 import {
-  ADMIN_FEE_STEP_AMT,
+  alignAdminFeeAmt,
+  buildDealerFeeOverrideBody,
   DEFAULT_MAX_ADMIN_FEE_AMT,
   DEFAULT_MAX_PROVISION_PRCNT,
   ntfFromAsset,
   parseSalesmanFeeCaps,
+  pickAdminFeeSource,
   provisionAmountOf,
   provisionPercentOf,
+  readAdminFeeAmt,
+  readAdminFeeBhv,
   resolveAdminFeeRule,
-  snapToStep,
   type SalesmanFeeCaps,
 } from '@/lib/salesman-fee';
 import Link from 'next/link';
@@ -188,8 +191,6 @@ export function ResultStep({
   );
   const seedProductCodeRef = useRef(resultSelection?.productCode ?? null);
 
-  const adminFeeRule = resolveAdminFeeRule(selectedProduct);
-
   const hasPromo = listPromo.length > 0;
   const products = tab === 'Standard' ? listStandard : listPromo;
   const minDpPercent = resolveMinDpPercent(selectedProduct);
@@ -219,6 +220,16 @@ export function ResultStep({
   // Hyundai: IsPromotion wajib true untuk produk dari tab Promotion (CalculateProductFromRule).
   const isPromotion = tab === 'Promotion';
   const highlightedRow = tableRows.find((r) => r.Tenor === selectedTenor);
+  const adminFeeSource = pickAdminFeeSource(highlightedRow, selectedProduct);
+  const adminFeeRule = resolveAdminFeeRule(adminFeeSource);
+  const dealerFeeOverride = buildDealerFeeOverrideBody({
+    enabled: isDealerSales,
+    feeTouched: feeTouchedRef.current,
+    rule: adminFeeRule,
+    adminFeeAmt,
+    adminFeeBhv: readAdminFeeBhv(adminFeeSource),
+    provisionPrcnt,
+  });
 
   // Tab promotion hanya relevan saat API mengirim produk promo.
   // Kalau promo kosong, balik ke tab Standard.
@@ -347,13 +358,7 @@ export function ResultStep({
           firstInstallment,
           isPromotion,
           partnerCode,
-          ...(isDealerSales && feeTouchedRef.current
-            ? {
-                adminFeeAmt,
-                adminFeeBhv: selectedProduct.AdminFeeBhv,
-                provisionFee: provisionPrcnt,
-              }
-            : {}),
+          ...dealerFeeOverride,
         }),
         signal: controller.signal,
       });
@@ -367,12 +372,14 @@ export function ResultStep({
       const rowBalloon = Number(highlightedRow?.BalloonAmt) || 0;
       const summaryBalloon = Number(summary.balloonAmt) || 0;
       setFinalSummary(
-        withProvisionBreakdown(
+        withCustomerFeeBreakdown(
           {
             ...summary,
             balloonAmt: summaryBalloon > 0 ? summaryBalloon : rowBalloon > 0 ? rowBalloon : 0,
           },
-          provisionPrcnt
+          provisionPrcnt,
+          highlightedRow,
+          { adminFeeAmt }
         )
       );
       setFinalSummaryAt(new Date().toISOString());
@@ -415,13 +422,7 @@ export function ResultStep({
           firstInstallment,
           isPromotion,
           partnerCode,
-          ...(isDealerSales && feeTouchedRef.current
-            ? {
-                adminFeeAmt,
-                adminFeeBhv: selectedProduct.AdminFeeBhv,
-                provisionFee: provisionPrcnt,
-              }
-            : {}),
+          ...dealerFeeOverride,
         }),
       });
       const data = await res.json();
@@ -438,13 +439,15 @@ export function ResultStep({
         tenor: highlightedRow.Tenor,
         firstInstallment,
         isPromotion,
-        summary: withProvisionBreakdown(
+        summary: withCustomerFeeBreakdown(
           {
             ...summary,
             balloonAmt: summaryBalloon > 0 ? summaryBalloon : rowBalloon > 0 ? rowBalloon : 0,
             firstInstallment,
           },
-          provisionPrcnt
+          provisionPrcnt,
+          highlightedRow,
+          { adminFeeAmt }
         ),
       });
     } catch (err) {
@@ -570,13 +573,7 @@ export function ResultStep({
           firstInstallment,
           isPromotion,
           partnerCode,
-          ...(isDealerSales && feeTouchedRef.current
-            ? {
-                adminFeeAmt,
-                adminFeeBhv: selectedProduct.AdminFeeBhv,
-                provisionFee: provisionPrcnt,
-              }
-            : {}),
+          ...dealerFeeOverride,
         }),
         signal: controller.signal,
       });
@@ -620,10 +617,9 @@ export function ResultStep({
       const seedRow = rows.find((r) => r.Tenor === nextTenor) ?? row36 ?? first;
       if (seedRow && !feeTouchedRef.current) {
         const ntf = ntfFromAsset(Number(otrPrice) || 0, dpPercent);
-        const rule = resolveAdminFeeRule(seedRow);
-        setAdminFeeAmt(
-          snapToStep(Number(seedRow.AdminFeeAmt) || 0, ADMIN_FEE_STEP_AMT, rule.min, rule.max)
-        );
+        const source = pickAdminFeeSource(seedRow, selectedProduct);
+        const rule = resolveAdminFeeRule(source);
+        setAdminFeeAmt(alignAdminFeeAmt(readAdminFeeAmt(source), rule));
         setProvisionPrcnt(Math.round(provisionPercentOf(seedRow, ntf) * 2) / 2);
       }
     } catch (e) {
@@ -644,9 +640,7 @@ export function ResultStep({
   const selectProduct = (product: ProductCalculation) => {
     feeTouchedRef.current = false;
     const rule = resolveAdminFeeRule(product);
-    setAdminFeeAmt(
-      snapToStep(Number(product.AdminFeeAmt) || 0, ADMIN_FEE_STEP_AMT, rule.min, rule.max)
-    );
+    setAdminFeeAmt(alignAdminFeeAmt(readAdminFeeAmt(product), rule));
     setProvisionPrcnt(Number(product.ProvisionFee) || 0);
     setSelectedProduct(product);
     setDpPercent(resolveDefaultDpPercent(product));
@@ -1193,7 +1187,7 @@ export function ResultStep({
                 summarySnapshot={
                   finalSummary ??
                   (selectedProduct && highlightedRow && otrPrice
-                    ? withProvisionBreakdown(
+                    ? withCustomerFeeBreakdown(
                         buildSummaryFromProductRow({
                           productName: selectedProduct.ProductName,
                           productCode: selectedProduct.ProductCode,
@@ -1204,7 +1198,9 @@ export function ResultStep({
                           firstInstallment,
                           row: highlightedRow,
                         }),
-                        provisionPrcnt
+                        provisionPrcnt,
+                        highlightedRow,
+                        { adminFeeAmt }
                       )
                     : null)
                 }

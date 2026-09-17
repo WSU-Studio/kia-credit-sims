@@ -9,7 +9,7 @@ import {
 } from '@/app/components/simulation/SimulationSummaryModal';
 import type { FinalSummaryInfo } from '@/app/types/credit-simulation';
 import { parseLeadAssetSnapshot } from '@/lib/lead-asset-snapshot';
-import { parseLeadSummarySnapshot, withProvisionBreakdown } from '@/lib/lead-summary-snapshot';
+import { parseLeadSummarySnapshot, withCustomerFeeBreakdown } from '@/lib/lead-summary-snapshot';
 import { parseVehicleSummaryParts } from '@/lib/hyundai-asset-resolve';
 import idMessages from '@/messages/id.json';
 
@@ -149,9 +149,11 @@ export function LeadSimulationSummaryButton({
         if (data?.errorId) setErrorId(String(data.errorId));
         throw new Error(data.error || data.message || 'Gagal memuat ringkasan kredit');
       }
-      const next = withProvisionBreakdown(
+      const next = withCustomerFeeBreakdown(
         data.summary as FinalSummaryInfo,
-        Number(lead.provisionFeeOverride) || 0
+        Number(lead.provisionFeeOverride) || 0,
+        null,
+        { adminFeeAmt: Number(lead.adminFeeAmtOverride) || 0 }
       );
       setSummary(next);
       // Simpan di sesi UI; API final-summary juga menulis ke Lead.summarySnapshot.

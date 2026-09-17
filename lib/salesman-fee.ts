@@ -43,11 +43,29 @@ export function normalizeFeeBhv(raw: string | null | undefined): HyundaiFeeBhv {
   return 'DEF';
 }
 
-export function resolveAdminFeeRule(
-  row: Pick<ProductCalculation, 'AdminFeeAmt' | 'AdminFeeBhv'> | null | undefined
-): AdminFeeRule {
-  const amount = Math.max(0, Number(row?.AdminFeeAmt) || 0);
-  const bhv = normalizeFeeBhv(row?.AdminFeeBhv);
+export type AdminFeeRow = {
+  AdminFeeAmt?: unknown;
+  AdminFeeBhv?: unknown;
+  adminFeeAmt?: unknown;
+  adminFeeBhv?: unknown;
+};
+
+/** Hyundai kadang PascalCase, kadang camelCase. */
+export function readAdminFeeAmt(row: AdminFeeRow | null | undefined): number {
+  const n = Number(row?.AdminFeeAmt ?? row?.adminFeeAmt);
+  return Number.isFinite(n) && n >= 0 ? n : 0;
+}
+
+export function readAdminFeeBhv(row: AdminFeeRow | null | undefined): string {
+  const raw = row?.AdminFeeBhv ?? row?.adminFeeBhv;
+  if (typeof raw === 'string') return raw;
+  if (raw == null) return '';
+  return String(raw);
+}
+
+export function resolveAdminFeeRule(row: AdminFeeRow | null | undefined): AdminFeeRule {
+  const amount = readAdminFeeAmt(row);
+  const bhv = normalizeFeeBhv(readAdminFeeBhv(row));
   if (bhv === 'LOCK') {
     return { bhv, amount, min: amount, max: amount, locked: true };
   }
@@ -58,6 +76,46 @@ export function resolveAdminFeeRule(
     return { bhv, amount, min: 0, max: amount, locked: false };
   }
   return { bhv, amount, min: 0, max: ADMIN_FEE_TECHNICAL_MAX_AMT, locked: false };
+}
+
+/**
+ * LOCK dari kartu GetListDefaultProductFromRule atau tenor CalculateProductFromRule
+ * harus menang dari DEF 3jt di sisi lain. Primary = tenor (UI) / detail (merge).
+ */
+export function pickAdminFeeSource(
+  primary: AdminFeeRow | null | undefined,
+  secondary: AdminFeeRow | null | undefined
+): AdminFeeRow | null {
+  const primaryRule = resolveAdminFeeRule(primary);
+  const secondaryRule = resolveAdminFeeRule(secondary);
+  if (primary && primaryRule.locked) return primary;
+  if (secondary && secondaryRule.locked) return secondary;
+  return primary ?? secondary ?? null;
+}
+
+/** LOCK memakai nominal Confins apa adanya (boleh tidak kelipatan 500rb). */
+export function alignAdminFeeAmt(value: number, rule: AdminFeeRule): number {
+  if (rule.locked) return rule.amount;
+  const n = Number.isFinite(value) ? value : rule.amount;
+  return snapToStep(n, ADMIN_FEE_STEP_AMT, rule.min, rule.max);
+}
+
+export function buildDealerFeeOverrideBody(input: {
+  enabled: boolean;
+  feeTouched: boolean;
+  rule: AdminFeeRule;
+  adminFeeAmt: number;
+  adminFeeBhv?: string | null;
+  provisionPrcnt: number;
+}): Record<string, unknown> {
+  if (!input.enabled || (!input.feeTouched && !input.rule.locked)) return {};
+  const admin = {
+    adminFeeAmt: input.rule.locked ? input.rule.amount : input.adminFeeAmt,
+    ...(input.adminFeeBhv ? { adminFeeBhv: input.adminFeeBhv } : {}),
+  };
+  // LOCK dari Confins boleh dikirim tanpa sentuh stepper — jangan ikut men-set provision 0.
+  if (!input.feeTouched && input.rule.locked) return admin;
+  return { ...admin, provisionFee: input.provisionPrcnt };
 }
 
 export function parseFeeCapNumber(raw: unknown, fallback: number, max: number): number {
@@ -142,15 +200,18 @@ export function clampSalesmanFeeOverride(
   override: SalesmanFeeOverride,
   caps: SalesmanFeeCaps
 ): SalesmanFeeOverride {
+  const locked = normalizeFeeBhv(override.adminFeeBhv) === 'LOCK';
   return {
     adminFeeAmt:
       override.adminFeeAmt != null
-        ? snapToStep(
-            override.adminFeeAmt,
-            ADMIN_FEE_STEP_AMT,
-            0,
-            ADMIN_FEE_TECHNICAL_MAX_AMT
-          )
+        ? locked
+          ? Math.max(0, override.adminFeeAmt)
+          : snapToStep(
+              override.adminFeeAmt,
+              ADMIN_FEE_STEP_AMT,
+              0,
+              ADMIN_FEE_TECHNICAL_MAX_AMT
+            )
         : undefined,
     adminFeeBhv: override.adminFeeBhv,
     provisionFee:
@@ -229,6 +290,7 @@ export function applyFeeOverrideToRows(
     return {
       ...row,
       AdminFeeAmt: newAdmin,
+      ...(override.adminFeeBhv ? { AdminFeeBhv: override.adminFeeBhv } : {}),
       ...(newProvPct != null
         ? { ProvisionType: 'PRCNT' as const, ProvisionFee: newProvPct }
         : {}),
