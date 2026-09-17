@@ -136,12 +136,16 @@ export interface FinalSummaryInfo {
   downPaymentAmt: number;
   /** Asset Insurance Paid — SummaryInfoObj.AssetInsPaidAmt */
   assetInsPaidAmt: number;
-  /** Fee Paid by Customer — SummaryInfoObj.FeePaidAmt */
+  /** Fee Paid by Customer — SummaryInfoObj.FeePaidAmt (admin + provisi + fiducia). */
   feePaidAmt: number;
   /** Provision % yang di-set salesman (atau nilai API). */
   provisionFeePrcnt?: number;
   /** Nominal provision = NTF × provisionFeePrcnt. */
   provisionFeeAmt?: number;
+  /** Admin fee dari row produk (rincian FeePaidAmt). */
+  adminFeeAmt?: number;
+  /** Fiducia dari row produk / SummaryInfoObj (rincian FeePaidAmt). */
+  fiduciaFeeAmt?: number;
   /**
    * Sisa pokok besar yang dibayar di akhir tenor (produk Balloon / BL).
    * 0 atau kosong = non-balloon → jangan tampilkan di UI.

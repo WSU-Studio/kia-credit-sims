@@ -144,6 +144,8 @@ export function mapSummaryInfoToFinalSummary(
     ),
     feePaidAmt: numField(summary, 'FeePaidAmt', 'feePaidAmt', 'FeePaidByCustomerAmt'),
     balloonAmt: numField(summary, 'BalloonAmt', 'balloonAmt'),
+    adminFeeAmt: numField(summary, 'AdminFeeAmt', 'adminFeeAmt') || undefined,
+    fiduciaFeeAmt: numField(summary, 'FiduciaFeeAmt', 'fiduciaFeeAmt', 'FiduciaAmt') || undefined,
     firstInstallment: fallbacks.firstInstallment,
   };
 }
