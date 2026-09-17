@@ -48,6 +48,8 @@ export function parseLeadSummarySnapshot(raw: unknown): FinalSummaryInfo | null 
     balloonAmt: num(obj.balloonAmt),
     provisionFeePrcnt: obj.provisionFeePrcnt != null ? num(obj.provisionFeePrcnt) : undefined,
     provisionFeeAmt: obj.provisionFeeAmt != null ? num(obj.provisionFeeAmt) : undefined,
+    adminFeeAmt: obj.adminFeeAmt != null ? num(obj.adminFeeAmt) : undefined,
+    fiduciaFeeAmt: obj.fiduciaFeeAmt != null ? num(obj.fiduciaFeeAmt) : undefined,
     firstInstallment: first,
   };
 }
@@ -109,6 +111,8 @@ export function buildSummaryFromProductRow(params: {
     balloonAmt,
     provisionFeePrcnt: provisionPercentOf(params.row, ntfAmt),
     provisionFeeAmt: provisionAmt,
+    adminFeeAmt,
+    fiduciaFeeAmt,
     firstInstallment: params.firstInstallment,
   };
 }
@@ -193,5 +197,84 @@ export function withProvisionBreakdown(
     ...summary,
     provisionFeePrcnt: pct,
     provisionFeeAmt: amt,
+  };
+}
+
+export type CustomerFeeBreakdown = {
+  adminFeeAmt: number;
+  provisionFeeAmt: number;
+  provisionFeePrcnt: number;
+  fiduciaFeeAmt: number;
+  feePaidAmt: number;
+};
+
+/**
+ * Rincian FeePaidAmt. Fiducia di row CalculateProductFromRule sering 0/kosong
+ * padahal FinalCalculate sudah memasukkan Rp 1jt ke FeePaidAmt — sisa
+ * (FeePaid − admin − provisi) dipakai sebagai Fiducia.
+ */
+export function resolveCustomerFeeBreakdown(
+  summary: Pick<
+    FinalSummaryInfo,
+    'feePaidAmt' | 'adminFeeAmt' | 'provisionFeeAmt' | 'provisionFeePrcnt' | 'fiduciaFeeAmt'
+  >
+): CustomerFeeBreakdown {
+  const feePaidAmt = Math.max(0, Number(summary.feePaidAmt) || 0);
+  const adminFeeAmt = Math.max(0, Number(summary.adminFeeAmt) || 0);
+  const provisionFeeAmt = Math.max(0, Number(summary.provisionFeeAmt) || 0);
+  const provisionFeePrcnt = Number(summary.provisionFeePrcnt) || 0;
+  const explicitFiducia = Math.max(0, Number(summary.fiduciaFeeAmt) || 0);
+  const remainder = Math.max(0, feePaidAmt - adminFeeAmt - provisionFeeAmt);
+  return {
+    adminFeeAmt,
+    provisionFeeAmt,
+    provisionFeePrcnt,
+    fiduciaFeeAmt: explicitFiducia > 0 ? explicitFiducia : remainder,
+    feePaidAmt,
+  };
+}
+
+/** Lengkapi admin/fiducia eksplisit dari row tenor + stepper salesman. */
+export function attachRowFees(
+  summary: FinalSummaryInfo,
+  row?: Pick<ProductCalculation, 'AdminFeeAmt' | 'FiduciaFeeAmt'> | null,
+  overrides?: { adminFeeAmt?: number }
+): FinalSummaryInfo {
+  const adminOverride = Number(overrides?.adminFeeAmt);
+  const adminFromRow = Number(row?.AdminFeeAmt);
+  const adminFeeAmt = Number.isFinite(adminOverride)
+    ? Math.max(0, adminOverride)
+    : Number.isFinite(adminFromRow)
+      ? Math.max(0, adminFromRow)
+      : Math.max(0, Number(summary.adminFeeAmt) || 0);
+
+  const fiduciaFromRow = Number(row?.FiduciaFeeAmt);
+  const fiduciaFromSummary = Number(summary.fiduciaFeeAmt);
+  const explicitFiducia =
+    Number.isFinite(fiduciaFromRow) && fiduciaFromRow > 0
+      ? fiduciaFromRow
+      : Number.isFinite(fiduciaFromSummary) && fiduciaFromSummary > 0
+        ? fiduciaFromSummary
+        : 0;
+
+  return {
+    ...summary,
+    adminFeeAmt,
+    ...(explicitFiducia > 0 ? { fiduciaFeeAmt: explicitFiducia } : {}),
+  };
+}
+
+export function withCustomerFeeBreakdown(
+  summary: FinalSummaryInfo,
+  provisionPrcnt: number,
+  row?: Pick<ProductCalculation, 'AdminFeeAmt' | 'FiduciaFeeAmt'> | null,
+  overrides?: { adminFeeAmt?: number }
+): FinalSummaryInfo {
+  const withProv = withProvisionBreakdown(attachRowFees(summary, row, overrides), provisionPrcnt);
+  const fees = resolveCustomerFeeBreakdown(withProv);
+  return {
+    ...withProv,
+    adminFeeAmt: fees.adminFeeAmt,
+    fiduciaFeeAmt: fees.fiduciaFeeAmt,
   };
 }
