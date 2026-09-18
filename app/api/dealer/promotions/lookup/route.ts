@@ -3,14 +3,13 @@ import { auth } from '@/lib/auth-server';
 import { isDealerPortalUser } from '@/lib/dealer-portal';
 import {
   calculatePromotionDiscount,
-  isPromotionCurrentlyValid,
+  pickDealerPromotion,
 } from '@/lib/dealer-promotion';
-import { requireDealerVendorScope } from '@/lib/dealer-promotion-access';
 import { prisma } from '@/lib/prisma';
 
 /**
- * Lookup active promotion for a model — used by quotation PriceStep (Phase 3).
- * Salesman & dealer admin can read promotions for their vendor.
+ * Lookup active promotion for model + year + trim — used by quotation PriceStep.
+ * Exact year/trim wins; falls back to legacy model-wide rows (manufYear 0).
  */
 export async function GET(request: NextRequest) {
   try {
@@ -39,19 +38,25 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const manufYearParam = request.nextUrl.searchParams.get('manufYear');
+    const manufYear =
+      manufYearParam != null && manufYearParam !== ''
+        ? Number(manufYearParam)
+        : null;
+    const fscCode = request.nextUrl.searchParams.get('fscCode')?.trim() || null;
+
     const otrPriceParam = request.nextUrl.searchParams.get('otrPrice');
     const otrPrice =
       otrPriceParam != null && otrPriceParam !== ''
         ? Number(otrPriceParam)
         : null;
 
-    const promo = await prisma.dealerPromotion.findUnique({
-      where: {
-        vendorCode_assetCode: { vendorCode, assetCode },
-      },
+    const rows = await prisma.dealerPromotion.findMany({
+      where: { vendorCode, assetCode },
     });
+    const promo = pickDealerPromotion(rows, manufYear, fscCode);
 
-    if (!promo || !isPromotionCurrentlyValid(promo)) {
+    if (!promo) {
       return NextResponse.json({ promotion: null, discountAmount: 0 });
     }
 
