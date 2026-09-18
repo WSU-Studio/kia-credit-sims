@@ -14,7 +14,7 @@ export default async function NewDealerPromotionPage() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Tambah Promo Diskon</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Atur diskon untuk satu model mobil di dealer Anda
+          Atur diskon untuk satu kombinasi model, tahun produksi, dan trim di dealer Anda
         </p>
       </div>
       <DealerPromotionForm />

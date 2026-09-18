@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DealerLink } from '@/app/components/dealer/DealerLink';
+import { YearTrimFields } from '@/app/components/dealer/promotions/YearTrimFields';
 import type { AssetMaster } from '@/app/types/credit-simulation';
 import {
   DISCOUNT_TYPES,
@@ -32,6 +33,10 @@ export function DealerPromotionForm({ promotionId }: DealerPromotionFormProps) {
   const [assetsLoading, setAssetsLoading] = useState(false);
 
   const [assetCode, setAssetCode] = useState('');
+  const [manufYear, setManufYear] = useState<number | ''>('');
+  const [fscCode, setFscCode] = useState('');
+  const [trimName, setTrimName] = useState('');
+  const [variantOtr, setVariantOtr] = useState<number | null>(null);
   const [discountType, setDiscountType] = useState<string>(DISCOUNT_TYPES.FIXED);
   const [discountValue, setDiscountValue] = useState('');
   const [maxDiscount, setMaxDiscount] = useState('');
@@ -72,6 +77,10 @@ export function DealerPromotionForm({ promotionId }: DealerPromotionFormProps) {
           if (!promoRes.ok) throw new Error(promoData.error || 'Gagal memuat promo');
           const p = promoData.promotion;
           setAssetCode(p.assetCode);
+          setManufYear(p.manufYear > 0 ? p.manufYear : '');
+          setFscCode(p.fscCode ?? '');
+          setTrimName(p.trimName ?? '');
+          setVariantOtr(p.variantOtr ?? null);
           setDiscountType(p.discountType);
           setDiscountValue(String(p.discountValue));
           setMaxDiscount(p.maxDiscount != null ? String(p.maxDiscount) : '');
@@ -91,13 +100,13 @@ export function DealerPromotionForm({ promotionId }: DealerPromotionFormProps) {
   }, [promotionId]);
 
   const selectedAsset = assets.find((a) => a.AssetCode === assetCode);
+  const previewOtr = variantOtr ?? selectedAsset?.Price;
+  const specLocked = !!promotionId && manufYear !== '' && !!fscCode;
 
   const previewDiscount =
-    selectedAsset?.Price && discountValue
+    previewOtr && discountValue
       ? discountType === DISCOUNT_TYPES.PERCENT
-        ? Math.floor(
-            selectedAsset.Price * (Number(discountValue) / 100)
-          )
+        ? Math.floor(previewOtr * (Number(discountValue) / 100))
         : Number(discountValue)
       : null;
 
@@ -110,6 +119,10 @@ export function DealerPromotionForm({ promotionId }: DealerPromotionFormProps) {
       const payload = {
         assetCode,
         assetName: selectedAsset?.AssetName ?? null,
+        manufYear,
+        fscCode,
+        trimName: trimName || null,
+        variantOtr,
         discountType,
         discountValue: Number(discountValue),
         maxDiscount:
@@ -172,7 +185,13 @@ export function DealerPromotionForm({ promotionId }: DealerPromotionFormProps) {
           id="assetCode"
           required
           value={assetCode}
-          onChange={(e) => setAssetCode(e.target.value)}
+          onChange={(e) => {
+            setAssetCode(e.target.value);
+            setManufYear('');
+            setFscCode('');
+            setTrimName('');
+            setVariantOtr(null);
+          }}
           disabled={assetsLoading || !!promotionId}
           className="w-full px-3 h-11 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-950 focus:border-blue-950 disabled:bg-gray-50"
         >
@@ -187,6 +206,26 @@ export function DealerPromotionForm({ promotionId }: DealerPromotionFormProps) {
           <p className="mt-1 text-xs text-gray-500">Model tidak dapat diubah saat edit.</p>
         )}
       </div>
+
+      <YearTrimFields
+        dealerCode={vendorCode}
+        assetCode={assetCode}
+        manufYear={manufYear}
+        fscCode={fscCode}
+        trimName={trimName}
+        disabled={specLocked}
+        onYearChange={setManufYear}
+        onTrimChange={(code, name, otr) => {
+          setFscCode(code);
+          setTrimName(name);
+          setVariantOtr(otr);
+        }}
+      />
+      {specLocked && (
+        <p className="-mt-2 text-xs text-gray-500">
+          Tahun dan trim tidak dapat diubah saat edit. Buat promo baru untuk kombinasi lain.
+        </p>
+      )}
 
       <div>
         <span className="block text-sm font-medium text-gray-700 mb-2">
@@ -266,9 +305,13 @@ export function DealerPromotionForm({ promotionId }: DealerPromotionFormProps) {
 
       {previewDiscount != null && selectedAsset && (
         <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-900">
-          Estimasi diskon untuk {selectedAsset.AssetName}:{' '}
+          Estimasi diskon untuk {selectedAsset.AssetName}
+          {trimName ? ` · ${trimName}` : ''}
+          {manufYear ? ` · ${manufYear}` : ''}:{' '}
           <strong>{formatIdr(previewDiscount)}</strong>
-          <span className="text-emerald-700"> (dari OTR {formatIdr(selectedAsset.Price)})</span>
+          {previewOtr != null && (
+            <span className="text-emerald-700"> (dari OTR {formatIdr(previewOtr)})</span>
+          )}
         </div>
       )}
 
@@ -336,7 +379,7 @@ export function DealerPromotionForm({ promotionId }: DealerPromotionFormProps) {
         </DealerLink>
         <button
           type="submit"
-          disabled={saving || !assetCode}
+          disabled={saving || !assetCode || manufYear === '' || !fscCode}
           className="px-5 py-2 bg-blue-950 text-white rounded-lg hover:bg-blue-950/90 disabled:opacity-50 font-medium"
         >
           {saving ? 'Menyimpan...' : promotionId ? 'Simpan Perubahan' : 'Buat Promo'}
