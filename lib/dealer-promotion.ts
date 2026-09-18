@@ -14,6 +14,10 @@ export type DealerPromotionRecord = {
   vendorName: string | null;
   assetCode: string;
   assetName: string | null;
+  manufYear: number;
+  fscCode: string;
+  trimName: string | null;
+  variantOtr: number | null;
   discountType: string;
   discountValue: number;
   maxDiscount: number | null;
@@ -22,6 +26,46 @@ export type DealerPromotionRecord = {
   isActive: boolean;
   notes: string | null;
 };
+
+/** Pre-year/trim rows: one promo for the whole model. */
+export const LEGACY_MANUF_YEAR = 0;
+export const LEGACY_FSC_CODE = '';
+
+export function isLegacyModelWidePromotion(promo: {
+  manufYear: number;
+  fscCode: string;
+}): boolean {
+  return promo.manufYear === LEGACY_MANUF_YEAR && promo.fscCode === LEGACY_FSC_CODE;
+}
+
+type PromotionMatchRow = {
+  manufYear: number;
+  fscCode: string;
+  isActive: boolean;
+  validFrom: Date | null;
+  validTo: Date | null;
+};
+
+/** Exact year+trim wins; else legacy model-wide row. */
+export function pickDealerPromotion<T extends PromotionMatchRow>(
+  rows: T[],
+  manufYear?: number | null,
+  fscCode?: string | null
+): T | null {
+  const live = rows.filter((row) => isPromotionCurrentlyValid(row));
+  if (live.length === 0) return null;
+
+  const year = manufYear != null && manufYear > 0 ? manufYear : null;
+  const fsc = fscCode?.trim() || null;
+  if (year && fsc) {
+    const exact = live.find((row) => row.manufYear === year && row.fscCode === fsc);
+    if (exact) return exact;
+  }
+
+  return (
+    live.find((row) => isLegacyModelWidePromotion(row)) ?? null
+  );
+}
 
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
 const DATETIME_LOCAL_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/;
@@ -109,6 +153,14 @@ export function calculatePromotionDiscount(
   return Math.min(Math.max(0, discount), maxAllowed);
 }
 
+/** Dealer Sales Promotion + salesman/user extra. Both reduce OTR on Get Quotation. */
+export function accumulatePriceDiscounts(
+  dealerPromoAmount: number,
+  additionalAmount: number
+): number {
+  return Math.max(0, dealerPromoAmount) + Math.max(0, additionalAmount);
+}
+
 export function formatDiscountLabel(
   promo: Pick<DealerPromotionRecord, 'discountType' | 'discountValue' | 'maxDiscount'>
 ): string {
@@ -133,6 +185,10 @@ export function formatIdr(value: number): string {
 export type DealerPromotionInput = {
   assetCode: string;
   assetName?: string | null;
+  manufYear: number;
+  fscCode: string;
+  trimName?: string | null;
+  variantOtr?: number | null;
   discountType: string;
   discountValue: number;
   maxDiscount?: number | null;
@@ -149,6 +205,28 @@ export function parseDealerPromotionInput(
     typeof body.assetCode === 'string' ? body.assetCode.trim() : '';
   if (!assetCode) {
     return { error: 'Model mobil wajib dipilih' };
+  }
+
+  const manufYear = Number(body.manufYear);
+  if (!Number.isInteger(manufYear) || manufYear < 2000 || manufYear > 2100) {
+    return { error: 'Tahun produksi wajib dipilih' };
+  }
+
+  const fscCode = typeof body.fscCode === 'string' ? body.fscCode.trim() : '';
+  if (!fscCode) {
+    return { error: 'Tipe / trim wajib dipilih' };
+  }
+
+  const trimName =
+    typeof body.trimName === 'string' ? body.trimName.trim() || null : null;
+
+  let variantOtr: number | null = null;
+  if (body.variantOtr !== undefined && body.variantOtr !== null && body.variantOtr !== '') {
+    const parsedOtr = Number(body.variantOtr);
+    if (!Number.isFinite(parsedOtr) || parsedOtr < 0) {
+      return { error: 'Harga OTR trim tidak valid' };
+    }
+    variantOtr = parsedOtr;
   }
 
   const discountType =
@@ -203,6 +281,10 @@ export function parseDealerPromotionInput(
   return {
     assetCode,
     assetName,
+    manufYear,
+    fscCode,
+    trimName,
+    variantOtr,
     discountType,
     discountValue,
     maxDiscount,
