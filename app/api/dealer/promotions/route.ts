@@ -14,7 +14,7 @@ export async function GET() {
 
     const promotions = await prisma.dealerPromotion.findMany({
       where: { vendorCode: scope.vendorCode },
-      orderBy: [{ isActive: 'desc' }, { assetName: 'asc' }, { updatedAt: 'desc' }],
+      orderBy: [{ isActive: 'desc' }, { assetName: 'asc' }, { manufYear: 'desc' }, { trimName: 'asc' }],
     });
 
     return NextResponse.json({ promotions });
@@ -47,15 +47,17 @@ export async function POST(request: NextRequest) {
 
     const existing = await prisma.dealerPromotion.findUnique({
       where: {
-        vendorCode_assetCode: {
+        vendorCode_assetCode_manufYear_fscCode: {
           vendorCode: scope.vendorCode,
           assetCode: parsed.assetCode,
+          manufYear: parsed.manufYear,
+          fscCode: parsed.fscCode,
         },
       },
     });
     if (existing) {
       return NextResponse.json(
-        { error: 'Promo untuk model ini sudah ada. Edit promo yang ada.' },
+        { error: 'Promo untuk model, tahun, dan trim ini sudah ada. Edit promo yang ada.' },
         { status: 409 }
       );
     }
@@ -66,6 +68,10 @@ export async function POST(request: NextRequest) {
         vendorName: scope.vendorName,
         assetCode: parsed.assetCode,
         assetName: parsed.assetName,
+        manufYear: parsed.manufYear,
+        fscCode: parsed.fscCode,
+        trimName: parsed.trimName,
+        variantOtr: parsed.variantOtr,
         discountType: parsed.discountType,
         discountValue: parsed.discountValue,
         maxDiscount: parsed.maxDiscount,

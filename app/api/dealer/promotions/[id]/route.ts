@@ -58,18 +58,24 @@ export async function PUT(
       return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
 
-    if (parsed.assetCode !== existing.assetCode) {
+    if (
+      parsed.assetCode !== existing.assetCode ||
+      parsed.manufYear !== existing.manufYear ||
+      parsed.fscCode !== existing.fscCode
+    ) {
       const conflict = await prisma.dealerPromotion.findUnique({
         where: {
-          vendorCode_assetCode: {
+          vendorCode_assetCode_manufYear_fscCode: {
             vendorCode: scope.vendorCode,
             assetCode: parsed.assetCode,
+            manufYear: parsed.manufYear,
+            fscCode: parsed.fscCode,
           },
         },
       });
       if (conflict && conflict.id !== id) {
         return NextResponse.json(
-          { error: 'Promo untuk model ini sudah ada' },
+          { error: 'Promo untuk model, tahun, dan trim ini sudah ada' },
           { status: 409 }
         );
       }
@@ -82,6 +88,10 @@ export async function PUT(
       data: {
         assetCode: parsed.assetCode,
         assetName: parsed.assetName,
+        manufYear: parsed.manufYear,
+        fscCode: parsed.fscCode,
+        trimName: parsed.trimName,
+        variantOtr: parsed.variantOtr,
         discountType: parsed.discountType,
         discountValue: parsed.discountValue,
         maxDiscount: parsed.maxDiscount,
