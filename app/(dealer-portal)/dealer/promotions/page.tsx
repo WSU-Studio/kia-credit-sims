@@ -19,7 +19,7 @@ export default async function DealerPromotionsPage() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Sales Promotion</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Kelola diskon per model — otomatis diterapkan saat salesman membuat quotation
+          Kelola diskon per model, tahun produksi, dan trim — otomatis diterapkan saat salesman membuat quotation
         </p>
       </div>
       <DealerPromotionsTable />

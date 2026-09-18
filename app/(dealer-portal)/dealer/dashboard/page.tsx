@@ -29,7 +29,7 @@ export default async function DealerDashboardPage() {
         {isDealerAdmin && (
           <DashboardCard
             title="Sales Promotion"
-            description="Atur diskon per model yang mempengaruhi harga quotation."
+            description="Atur diskon per model, tahun produksi, dan trim yang mempengaruhi harga quotation."
             href="/dealer/promotions"
           />
         )}
