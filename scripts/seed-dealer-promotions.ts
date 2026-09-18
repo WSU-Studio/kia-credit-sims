@@ -1,7 +1,7 @@
 /**
  * Demo rows for /dealer/promotions (DealerPromotionsTable).
- * One promo per model per dealer (`vendorCode` + `assetCode`). Seed rows are
- * tagged `notes: [seed]` so they can be removed without touching real promos.
+ * One promo per model + year + trim per dealer.
+ * Seed rows are tagged `notes: [seed]` so they can be removed without touching real promos.
  *
  *   npx tsx --env-file=.env scripts/seed-dealer-promotions.ts
  *   npx tsx --env-file=.env scripts/seed-dealer-promotions.ts --vendor=K13AD60506
@@ -192,11 +192,20 @@ async function seedRows() {
     : MODELS.length;
 
   const today = toJakartaYmd(new Date());
+  await prisma.dealerPromotion.deleteMany({
+    where: {
+      vendorCode,
+      notes: { startsWith: '[seed]' },
+    },
+  });
   let upserted = 0;
 
   for (let i = 0; i < count; i += 1) {
     const model = MODELS[i];
     const assetCode = seedAssetCode(i);
+    const manufYear = 2024 + (i % 3);
+    const fscCode = `SEED-T${String(i + 1).padStart(2, '0')}`;
+    const trimName = `${model.assetName} ${['Prime', 'Signature', 'Style'][i % 3]}`;
     const bucket = i % 3;
     const isPercent = i % 2 === 1;
 
@@ -223,11 +232,18 @@ async function seedRows() {
 
     await prisma.dealerPromotion.upsert({
       where: {
-        vendorCode_assetCode: { vendorCode, assetCode },
+        vendorCode_assetCode_manufYear_fscCode: {
+          vendorCode,
+          assetCode,
+          manufYear,
+          fscCode,
+        },
       },
       update: {
         vendorName,
         assetName: model.assetName,
+        trimName,
+        variantOtr: 300_000_000 + i * 10_000_000,
         discountType,
         discountValue,
         maxDiscount,
@@ -241,6 +257,10 @@ async function seedRows() {
         vendorName,
         assetCode,
         assetName: model.assetName,
+        manufYear,
+        fscCode,
+        trimName,
+        variantOtr: 300_000_000 + i * 10_000_000,
         discountType,
         discountValue,
         maxDiscount,
