@@ -1,8 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { MAX_DISCOUNT_PERCENT } from '@/lib/dealer-promotion';
+import {
+  MAX_DISCOUNT_PERCENT,
+  accumulatePriceDiscounts,
+} from '@/lib/dealer-promotion';
 import { normalizePartnerCode, MAX_PARTNER_CODE_LENGTH } from '@/lib/hyundai-partner';
 import { useDealerPromotionLookup } from '@/app/hooks/useDealerPromotionLookup';
 
@@ -10,19 +13,22 @@ interface PriceStepProps {
   modelName: string;
   suggestedPrice?: number;
   assetCode?: string;
+  manufYear?: number;
+  fscCode?: string;
   initialPartnerCode?: string | null;
   /** Prefill from dealer promotion (nominal) */
   promotionDiscount?: number;
-  /** Snapshot discount when landing from a live promo template. */
+  /** Extra discount only (salesman/user or promo-landing snapshot). Not dealer promo. */
   initialDiscount?: number;
-  /** When true, discount field is read-only (locked promo) */
+  /** When true, additional discount field is read-only */
   lockPromotionDiscount?: boolean;
-  /** Dealer/salesman may type discount even when a promo is prefilled. */
+  /** Dealer/salesman quotation: show Sales Promotion column + extra input. */
   allowDiscountOverride?: boolean;
   onComplete: (
     netPrice: number,
     discount: number,
-    partnerCode: string | null
+    partnerCode: string | null,
+    additionalDiscount?: number
   ) => void;
 }
 
@@ -30,6 +36,8 @@ export function PriceStep({
   modelName,
   suggestedPrice,
   assetCode,
+  manufYear,
+  fscCode,
   initialPartnerCode = null,
   promotionDiscount: promotionDiscountProp,
   initialDiscount,
@@ -38,49 +46,32 @@ export function PriceStep({
   onComplete,
 }: PriceStepProps) {
   const t = useTranslations('creditSimulation');
-  const [manualDiscount, setManualDiscount] = useState<number | ''>(
+  const [additionalDiscount, setAdditionalDiscount] = useState<number | ''>(
     initialDiscount && initialDiscount > 0 ? initialDiscount : 0
   );
   const [partnerCode, setPartnerCode] = useState<string>(
     () => initialPartnerCode ?? ''
   );
   const [error, setError] = useState<string | null>(null);
-  const discountEditedRef = useRef(false);
 
   const otrPrice = suggestedPrice ?? 0;
   const lookupEnabled =
+    allowDiscountOverride &&
     promotionDiscountProp == null &&
-    !!assetCode &&
-    !(initialDiscount && initialDiscount > 0);
+    !!assetCode;
   const { loading: promoLoading, result: promoResult } = useDealerPromotionLookup(
     assetCode,
     otrPrice,
-    lookupEnabled
+    lookupEnabled,
+    manufYear,
+    fscCode
   );
 
-  useEffect(() => {
-    if (!allowDiscountOverride || discountEditedRef.current) return;
-    const seed =
-      promotionDiscountProp ??
-      promoResult?.discountAmount ??
-      (initialDiscount && initialDiscount > 0 ? initialDiscount : null);
-    if (seed != null && seed > 0) {
-      setManualDiscount(seed);
-    }
-  }, [
-    allowDiscountOverride,
-    promotionDiscountProp,
-    promoResult?.discountAmount,
-    initialDiscount,
-  ]);
-
-  const typedDiscount = typeof manualDiscount === 'number' ? manualDiscount : 0;
-  const promoAmount = promotionDiscountProp ?? promoResult?.discountAmount ?? 0;
-  const effectiveDiscount = allowDiscountOverride
-    ? typedDiscount
-    : (promotionDiscountProp ??
-      promoResult?.discountAmount ??
-      typedDiscount);
+  const typedAdditional =
+    typeof additionalDiscount === 'number' ? additionalDiscount : 0;
+  const dealerPromoAmount = promotionDiscountProp ?? promoResult?.discountAmount ?? 0;
+  const totalDiscount = accumulatePriceDiscounts(dealerPromoAmount, typedAdditional);
+  const netAfterDiscount = otrPrice - totalDiscount;
 
   const promoLabel =
     promotionDiscountProp != null
@@ -96,21 +87,14 @@ export function PriceStep({
     }).format(value);
   };
 
-  const discountLocked =
-    !allowDiscountOverride && lockPromotionDiscount && effectiveDiscount > 0;
-  const showManualInput =
-    allowDiscountOverride ||
-    (promotionDiscountProp == null && !promoResult?.discountAmount);
-  const discountReadOnly = discountLocked || !showManualInput;
-  const discountInputValue = discountReadOnly
-    ? formatAmountGroup(effectiveDiscount)
-    : formatAmountGroup(manualDiscount);
+  const showDealerPromoColumn =
+    allowDiscountOverride || dealerPromoAmount > 0 || promoLoading;
+  const additionalReadOnly = lockPromotionDiscount && !allowDiscountOverride;
 
-  const handleDiscountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (discountReadOnly) return;
-    discountEditedRef.current = true;
+  const handleAdditionalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (additionalReadOnly) return;
     setError(null);
-    setManualDiscount(parseAmountGroup(e.target.value));
+    setAdditionalDiscount(parseAmountGroup(e.target.value));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -121,14 +105,13 @@ export function PriceStep({
       return;
     }
 
-    const discountVal = effectiveDiscount;
-    if (discountVal < 0) {
+    if (totalDiscount < 0) {
       setError(t('discountMinError'));
       return;
     }
 
     const maxDiscount = Math.floor(otrPrice * MAX_DISCOUNT_PERCENT);
-    if (discountVal > maxDiscount) {
+    if (totalDiscount > maxDiscount) {
       setError(
         t('discountMaxError', {
           max: formatPrice(maxDiscount),
@@ -138,13 +121,17 @@ export function PriceStep({
       return;
     }
 
-    const netPrice = otrPrice - discountVal;
-    if (netPrice <= 0) {
+    if (netAfterDiscount <= 0) {
       setError(t('discountExceedsOtrError'));
       return;
     }
 
-    onComplete(netPrice, discountVal, normalizePartnerCode(partnerCode) || null);
+    onComplete(
+      netAfterDiscount,
+      totalDiscount,
+      normalizePartnerCode(partnerCode) || null,
+      typedAdditional
+    );
   };
 
   return (
@@ -176,40 +163,89 @@ export function PriceStep({
           )}
         </div>
 
-        <div>
-          <label htmlFor="discount" className="block text-sm font-medium mb-2">
-            {t('discountLabel')}{' '}
-            {!discountLocked && showManualInput && (
-              <span className="text-gray-400 font-normal">(opsional)</span>
-            )}
-          </label>
-          {promoLoading && (
-            <p className="mb-2 text-xs text-[#002c5f]">Memuat promo dealer...</p>
-          )}
-          {promoLabel && !promoLoading && promoAmount > 0 && (
-            <p className="mb-2 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
-              {promoLabel} — {formatPrice(promoAmount)}
-            </p>
+        <div
+          className={
+            showDealerPromoColumn
+              ? 'grid grid-cols-1 sm:grid-cols-2 gap-4'
+              : undefined
+          }
+        >
+          {showDealerPromoColumn && (
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                {t('dealerPromoDiscountLabel')}
+              </label>
+              {promoLoading ? (
+                <p className="mb-2 text-xs text-[#002c5f]">Memuat promo dealer...</p>
+              ) : promoLabel && dealerPromoAmount > 0 ? (
+                <p className="mb-2 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                  {promoLabel}
+                </p>
+              ) : (
+                <p className="mb-2 text-xs text-gray-500">
+                  {t('dealerPromoDiscountHint')}
+                </p>
+              )}
+              <div
+                className="w-full px-4 py-3 border border-[var(--border)] rounded-lg bg-gray-100 text-lg"
+                aria-readonly
+              >
+                {dealerPromoAmount > 0
+                  ? formatPrice(dealerPromoAmount)
+                  : t('dealerPromoDiscountNone')}
+              </div>
+            </div>
           )}
 
-          {(showManualInput || effectiveDiscount > 0) && (
+          <div>
+            <label htmlFor="discount" className="block text-sm font-medium mb-2">
+              {showDealerPromoColumn
+                ? t('additionalDiscountLabel')
+                : t('discountLabel')}{' '}
+              {!additionalReadOnly && (
+                <span className="text-gray-400 font-normal">(opsional)</span>
+              )}
+            </label>
             <input
               type="text"
               inputMode="numeric"
               autoComplete="off"
               id="discount"
-              value={discountInputValue}
-              onChange={handleDiscountChange}
-              readOnly={discountReadOnly}
-              placeholder={t('discountPlaceholder')}
+              value={formatAmountGroup(additionalDiscount)}
+              onChange={handleAdditionalChange}
+              readOnly={additionalReadOnly}
+              placeholder={
+                showDealerPromoColumn
+                  ? t('additionalDiscountPlaceholder')
+                  : t('discountPlaceholder')
+              }
               className={`w-full px-4 py-3 border border-[var(--border)] rounded-lg focus:ring-2 focus:ring-[#002c5f] focus:border-transparent ${
-                discountReadOnly
+                additionalReadOnly
                   ? 'bg-gray-100 cursor-not-allowed'
                   : 'bg-[var(--background)]'
               }`}
             />
-          )}
+          </div>
         </div>
+
+        {showDealerPromoColumn && (dealerPromoAmount > 0 || typedAdditional > 0) && (
+          <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm space-y-1">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-gray-600">{t('discountTotalLabel')}</span>
+              <span className="font-semibold text-gray-900">
+                {formatPrice(totalDiscount)}
+              </span>
+            </div>
+            {otrPrice > 0 && (
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-gray-600">{t('netPriceAfterDiscountLabel')}</span>
+                <span className="font-semibold text-gray-900">
+                  {formatPrice(Math.max(0, netAfterDiscount))}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
 
         <div>
           <label htmlFor="partnerCode" className="block text-sm font-medium mb-2">
@@ -222,9 +258,6 @@ export function PriceStep({
             value={partnerCode}
             onChange={(e) => {
               setError(null);
-              // Simpan apa adanya — partner code bisa punya spasi & karakter
-              // spesial. Normalisasi (trim/uppercase) baru dilakukan saat submit
-              // via normalizePartnerCode() supaya user bebas mengetik.
               setPartnerCode(e.target.value);
             }}
             placeholder={t('partnerCodePlaceholder')}

@@ -136,6 +136,9 @@ export function SimulationWizard({
     hydration?.otrPrice ?? null
   );
   const [discount, setDiscount] = useState<number>(hydration?.discount ?? 0);
+  const [additionalDiscount, setAdditionalDiscount] = useState<number>(
+    hydration?.discount ?? 0
+  );
   const [partnerCode, setPartnerCode] = useState<string | null>(
     hydration?.partnerCode ?? null
   );
@@ -203,6 +206,7 @@ export function SimulationWizard({
     if (fromIdx <= steps.indexOf('price')) {
       setOtrPrice(null);
       setDiscount(0);
+      setAdditionalDiscount(0);
       setPartnerCode(null);
     }
     if (fromIdx <= steps.indexOf('result')) {
@@ -229,6 +233,7 @@ export function SimulationWizard({
     setSpecs({});
     setOtrPrice(null);
     setDiscount(0);
+    setAdditionalDiscount(0);
     setPartnerCode(null);
     setLeadNo(null);
     setLeadNoLoading(false);
@@ -348,10 +353,12 @@ export function SimulationWizard({
   const handlePriceComplete = async (
     netPrice: number,
     discountAmount: number,
-    submittedPartnerCode: string | null
+    submittedPartnerCode: string | null,
+    extraDiscount = 0
   ) => {
     setOtrPrice(netPrice);
     setDiscount(discountAmount);
+    setAdditionalDiscount(extraDiscount);
     setPartnerCode(submittedPartnerCode);
     setCurrentStepKey('result');
     setLeadNo(null);
@@ -580,8 +587,10 @@ export function SimulationWizard({
                   modelName={selectedAsset!.AssetName}
                   suggestedPrice={specs.variantPrice ?? selectedAsset!.Price}
                   assetCode={selectedAsset!.AssetCode}
+                  manufYear={specs.manufacturingYear}
+                  fscCode={specs.fscCode}
                   initialPartnerCode={partnerCode}
-                  initialDiscount={isPromoLanding ? discount : undefined}
+                  initialDiscount={additionalDiscount}
                   lockPromotionDiscount={false}
                   allowDiscountOverride={isDealerSales}
                   onComplete={handlePriceComplete}
