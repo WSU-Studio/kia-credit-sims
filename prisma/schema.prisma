@@ -371,7 +371,7 @@ model VehicleModelImage {
 }
 
 // ============================================
-// Dealer Sales Promotions (discount per model)
+// Dealer Sales Promotions (discount per model + year + trim)
 // ============================================
 
 model DealerPromotion {
@@ -380,6 +380,11 @@ model DealerPromotion {
   vendorName    String?
   assetCode     String
   assetName     String?
+  /// 0 + empty fscCode = legacy model-wide row (before year/trim).
+  manufYear     Int       @default(0)
+  fscCode       String    @default("")
+  trimName      String?
+  variantOtr    Float?
   discountType  String // FIXED | PERCENT
   discountValue Float
   maxDiscount   Float?
@@ -392,7 +397,8 @@ model DealerPromotion {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  @@unique([vendorCode, assetCode])
+  @@unique([vendorCode, assetCode, manufYear, fscCode])
+  @@index([vendorCode, assetCode])
   @@index([vendorCode, isActive])
   @@map("dealer_promotions")
 }
