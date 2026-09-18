@@ -5,13 +5,13 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: [self-hosted, kia-website-tqa]
+    runs-on: [self-hosted, kiaf-website-tqa]
     environment: tqa
 
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       MODE_ENV: production
-      KIA_ENV_FILE: /data/kia/nextjs-tqa.env
+      KIA_ENV_FILE: /data/kiaf/nextjs-tqa.env
 
     steps:
       - name: Checkout code
@@ -86,7 +86,7 @@ jobs:
           set +a
 
           # Recreate so PM2 dump stores injected env (plain restart can keep stale env)
-          pm2 delete kia-nextjs-app 2>/dev/null || true
-          pm2 start npm --name kia-nextjs-app -- start
+          pm2 delete kiaf-nextjs-app 2>/dev/null || true
+          pm2 start npm --name kiaf-nextjs-app -- start
           pm2 save
 
