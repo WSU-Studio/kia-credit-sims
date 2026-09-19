@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth-server';
 import { isDealerPortalUser } from '@/lib/dealer-portal';
-import {
-  calculatePromotionDiscount,
-  pickDealerPromotion,
-} from '@/lib/dealer-promotion';
-import { prisma } from '@/lib/prisma';
+import { lookupDealerPromotionDiscount } from '@/lib/dealer-promotion-lookup';
 
 /**
- * Lookup active promotion for model + year + trim — used by quotation PriceStep.
- * Exact year/trim wins; falls back to legacy model-wide rows (manufYear 0).
+ * Lookup active promotion for model + year + trim — dealer quotation PriceStep.
+ * Vendor comes from the signed-in dealer session (same as DealerPromotionForm).
  */
 export async function GET(request: NextRequest) {
   try {
@@ -51,24 +47,15 @@ export async function GET(request: NextRequest) {
         ? Number(otrPriceParam)
         : null;
 
-    const rows = await prisma.dealerPromotion.findMany({
-      where: { vendorCode, assetCode },
+    const result = await lookupDealerPromotionDiscount({
+      vendorCode,
+      assetCode,
+      manufYear,
+      fscCode,
+      otrPrice,
     });
-    const promo = pickDealerPromotion(rows, manufYear, fscCode);
 
-    if (!promo) {
-      return NextResponse.json({ promotion: null, discountAmount: 0 });
-    }
-
-    const discountAmount =
-      otrPrice != null && Number.isFinite(otrPrice) && otrPrice > 0
-        ? calculatePromotionDiscount(otrPrice, promo)
-        : null;
-
-    return NextResponse.json({
-      promotion: promo,
-      discountAmount: discountAmount ?? 0,
-    });
+    return NextResponse.json(result);
   } catch (error) {
     console.error('Error looking up dealer promotion:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
