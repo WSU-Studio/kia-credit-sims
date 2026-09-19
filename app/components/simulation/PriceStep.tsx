@@ -22,8 +22,10 @@ interface PriceStepProps {
   initialDiscount?: number;
   /** When true, additional discount field is read-only */
   lockPromotionDiscount?: boolean;
-  /** Dealer/salesman quotation: show Sales Promotion column + extra input. */
+  /** Dealer/salesman quotation: always show Sales Promotion column + extra input. */
   allowDiscountOverride?: boolean;
+  /** DealerStep `VendorCode` — public sim lookup (must match DealerPromotionForm vendor). */
+  vendorCode?: string | null;
   onComplete: (
     netPrice: number,
     discount: number,
@@ -43,6 +45,7 @@ export function PriceStep({
   initialDiscount,
   lockPromotionDiscount = false,
   allowDiscountOverride = false,
+  vendorCode = null,
   onComplete,
 }: PriceStepProps) {
   const t = useTranslations('creditSimulation');
@@ -56,15 +59,16 @@ export function PriceStep({
 
   const otrPrice = suggestedPrice ?? 0;
   const lookupEnabled =
-    allowDiscountOverride &&
     promotionDiscountProp == null &&
-    !!assetCode;
+    !!assetCode &&
+    (!!vendorCode?.trim() || allowDiscountOverride);
   const { loading: promoLoading, result: promoResult } = useDealerPromotionLookup(
     assetCode,
     otrPrice,
     lookupEnabled,
     manufYear,
-    fscCode
+    fscCode,
+    vendorCode
   );
 
   const typedAdditional =

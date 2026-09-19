@@ -589,6 +589,7 @@ export function SimulationWizard({
                   assetCode={selectedAsset!.AssetCode}
                   manufYear={specs.manufacturingYear}
                   fscCode={specs.fscCode}
+                  vendorCode={selectedDealer!.VendorCode}
                   initialPartnerCode={partnerCode}
                   initialDiscount={additionalDiscount}
                   lockPromotionDiscount={false}

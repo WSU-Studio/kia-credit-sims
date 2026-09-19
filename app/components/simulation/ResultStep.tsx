@@ -74,6 +74,7 @@ function resolveDefaultDpPercent(product: ProductCalculation): number {
 interface ResultStepProps {
   leadNo?: string;
   otrPrice?: number;
+  /** Total AssetDiscAmt: dealer Sales Promotion + extra from PriceStep. */
   discount?: number;
   partnerCode?: string | null;
   vehicle?: VehicleSummaryInfo;

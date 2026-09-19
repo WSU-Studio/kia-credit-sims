@@ -8,17 +8,23 @@ type LookupResult = {
   label: string | null;
 };
 
+/**
+ * @param vendorCode DealerStep `VendorCode`. Public sim uses this (unauthenticated).
+ * Quotation may omit it and use the dealer-session lookup instead.
+ */
 export function useDealerPromotionLookup(
   assetCode: string | undefined,
   otrPrice: number,
   enabled: boolean,
   manufYear?: number | null,
-  fscCode?: string | null
+  fscCode?: string | null,
+  vendorCode?: string | null
 ) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<LookupResult | null>(null);
 
   useEffect(() => {
+    const vendor = vendorCode?.trim() || '';
     if (!enabled || !assetCode) {
       setResult(null);
       return;
@@ -34,8 +40,14 @@ export function useDealerPromotionLookup(
         if (otrPrice > 0) params.set('otrPrice', String(otrPrice));
         if (manufYear != null && manufYear > 0) params.set('manufYear', String(manufYear));
         if (fscCode?.trim()) params.set('fscCode', fscCode.trim());
+        const path = vendor
+          ? '/api/simulation/dealer-promotions/lookup'
+          : '/api/dealer/promotions/lookup';
+        if (vendor) params.set('vendorCode', vendor);
 
-        const res = await fetch(`/api/dealer/promotions/lookup?${params}`, {
+        const url = `${path}?${params}`;
+
+        const res = await fetch(url, {
           signal: controller.signal,
         });
         const data = await res.json();
@@ -70,7 +82,7 @@ export function useDealerPromotionLookup(
       cancelled = true;
       controller.abort();
     };
-  }, [assetCode, otrPrice, enabled, manufYear, fscCode]);
+  }, [assetCode, otrPrice, enabled, manufYear, fscCode, vendorCode]);
 
   return { loading, result };
 }
