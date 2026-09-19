@@ -11,7 +11,7 @@ export type DealerProfileInput = {
   vendorCity?: string | null;
   oriOfficeCode?: string | null;
   oriOfficeName?: string | null;
-  /** Emp number CMO (HCFI) — opsional, sumber berbeda dari salesEmpNo. */
+  /** Emp number CMO (KIA) — opsional, sumber berbeda dari salesEmpNo. */
   cmoEmpNo?: string | null;
   /** Emp number salesman dealer (Hyundai Get List Sales Person) — wajib untuk Salesman. */
   salesEmpNo?: string | null;

@@ -28,7 +28,7 @@ export async function requireDealerLeadsScope(): Promise<DealerLeadsScope> {
 
   const vendorCode = session.user.vendorCode?.trim();
   if (!vendorCode) {
-    throw new Error('Akun belum memiliki penugasan dealer. Hubungi admin HCFI.');
+    throw new Error('Akun belum memiliki penugasan dealer. Hubungi admin KIA.');
   }
 
   const userType = session.user.userType ?? '';

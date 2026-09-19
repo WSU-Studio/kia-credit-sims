@@ -4,7 +4,7 @@ import { parseKtpStorageUrl } from '@/lib/ktp-url';
 import { readLocalKtpFile, saveLocalKtpFile } from '@/lib/local-ktp-storage';
 import { getS3Bucket, getS3Client } from '@/lib/s3-client';
 
-export const KTP_WATERMARK_META_KEY = 'hcfi-watermarked';
+export const KTP_WATERMARK_META_KEY = 'kia-watermarked';
 export const KTP_WATERMARK_META_VALUE = '1';
 
 const WATERMARK_META_KEY = KTP_WATERMARK_META_KEY;
@@ -62,7 +62,7 @@ export async function watermarkStoredKtp(
 
   const already =
     existing.Metadata?.[WATERMARK_META_KEY] === WATERMARK_META_VALUE ||
-    existing.Metadata?.['hcfi_watermarked'] === WATERMARK_META_VALUE;
+    existing.Metadata?.['kia_watermarked'] === WATERMARK_META_VALUE;
 
   if (already && !options.force) {
     return { status: 'already_watermarked', key: ref.key };

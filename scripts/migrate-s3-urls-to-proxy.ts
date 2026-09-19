@@ -2,10 +2,10 @@
  * Migrate legacy direct-S3 URLs to same-origin proxy URLs.
  *
  * Why: S3 bucket is locked to VPC endpoint only. Browsers (outside VPC) get
- * AccessDenied when hitting `https://{bucket}.s3.{region}.amazonaws.com/hcfi_media/...`.
+ * AccessDenied when hitting `https://{bucket}.s3.{region}.amazonaws.com/kia_media/...`.
  * The new `/api/media/file/{key}` proxy works for both VPC and public callers.
  *
- * What it touches (only `hcfi_media/` keys — KTP and other prefixes ignored):
+ * What it touches (only `kia_media/` keys — KTP and other prefixes ignored):
  *   - Media.url
  *   - Banner.imageUrl
  *   - Product.imageUrl + Product.layout (JSON, recursive)

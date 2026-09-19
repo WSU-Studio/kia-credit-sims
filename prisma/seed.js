@@ -143,36 +143,36 @@ async function main() {
   if (!seedAdminPassword) {
     if (isProdLike) {
       console.warn(
-        'SEED_ADMIN_PASSWORD unset — skipping admin@hcfi.com create/update in production-like env'
+        'SEED_ADMIN_PASSWORD unset — skipping admin@kia.com create/update in production-like env'
       );
       return;
     }
     throw new Error(
-      'SEED_ADMIN_PASSWORD is required to seed admin@hcfi.com (no hardcoded default)'
+      'SEED_ADMIN_PASSWORD is required to seed admin@kia.com (no hardcoded default)'
     );
   }
 
   const hashedPassword = await hashPassword(seedAdminPassword);
   const existingAdmin = await prisma.user.findUnique({
-    where: { email: 'admin@hcfi.com' },
+    where: { email: 'admin@kia.com' },
   });
 
   let superAdminUser;
   if (existingAdmin) {
     // Never reset an existing admin password from seed — only sync userType.
     superAdminUser = await prisma.user.update({
-      where: { email: 'admin@hcfi.com' },
-      data: { userType: 'HCFI_ADMIN' },
+      where: { email: 'admin@kia.com' },
+      data: { userType: 'KIA_ADMIN' },
     });
     console.log('Super Admin user synced (password unchanged)');
   } else {
     superAdminUser = await prisma.user.create({
       data: {
-        email: 'admin@hcfi.com',
+        email: 'admin@kia.com',
         password: hashedPassword,
         name: 'Super Admin',
         isActive: true,
-        userType: 'HCFI_ADMIN',
+        userType: 'KIA_ADMIN',
       },
     });
     console.log('Super Admin user created from SEED_ADMIN_PASSWORD');

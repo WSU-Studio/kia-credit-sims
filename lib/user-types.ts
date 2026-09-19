@@ -1,5 +1,5 @@
 export const USER_TYPES = {
-  HCFI_ADMIN: 'HCFI_ADMIN',
+  KIA_ADMIN: 'KIA_ADMIN',
   DEALER_ADMIN: 'DEALER_ADMIN',
   SALESMAN: 'SALESMAN',
 } as const;
@@ -35,7 +35,7 @@ export function resolveUserTypeFromRoleNames(
     return USER_TYPES.DEALER_ADMIN;
   }
   if (roleNames.length > 0) {
-    return USER_TYPES.HCFI_ADMIN;
+    return USER_TYPES.KIA_ADMIN;
   }
   return null;
 }

@@ -15,7 +15,7 @@ export type DealerAssignValue = {
   vendorCity: string;
   oriOfficeCode: string;
   oriOfficeName: string;
-  /** Emp number CMO (HCFI) — opsional, diisi manual. Sumber berbeda dari salesEmpNo. */
+  /** Emp number CMO (KIA) — opsional, diisi manual. Sumber berbeda dari salesEmpNo. */
   cmoEmpNo: string;
   /** Emp number salesman dealer — dipilih dari API Get List Sales Person. */
   salesEmpNo: string;
@@ -360,7 +360,7 @@ export function DealerAssignFields({
               ))}
             </select>
             <p className="mt-1 text-xs text-gray-500">
-              Nomor CMO (HCFI) — berbeda dari Emp Number salesman. Jika diisi,
+              Nomor CMO (KIA) — berbeda dari Emp Number salesman. Jika diisi,
               CMO di halaman leads terkunci ke nomor ini.
             </p>
           </div>

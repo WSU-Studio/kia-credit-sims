@@ -25,7 +25,7 @@ export async function requireDealerVendorScope(
 
   const vendorCode = session.user.vendorCode?.trim();
   if (!vendorCode) {
-    throw new Error('Akun belum memiliki penugasan dealer. Hubungi admin HCFI.');
+    throw new Error('Akun belum memiliki penugasan dealer. Hubungi admin KIA.');
   }
 
   return {

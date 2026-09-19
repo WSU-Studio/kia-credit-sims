@@ -26,7 +26,7 @@ type User = {
 };
 
 const USER_TYPE_LABELS: Record<string, string> = {
-  HCFI_ADMIN: 'HCFI Admin',
+  KIA_ADMIN: 'KIA Admin',
   DEALER_ADMIN: 'Dealer Admin',
   SALESMAN: 'Salesman',
 };

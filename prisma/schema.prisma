@@ -21,7 +21,7 @@ model User {
   password            String
   name                String
   isActive            Boolean   @default(true)
-  /// HCFI_ADMIN | DEALER_ADMIN | SALESMAN — derived from assigned roles
+  /// KIA_ADMIN | DEALER_ADMIN | SALESMAN — derived from assigned roles
   userType            String?
   /// Hyundai vendor/dealer assignment (required for DEALER_ADMIN & SALESMAN)
   vendorCode          String?
@@ -29,7 +29,7 @@ model User {
   vendorCity          String?
   oriOfficeCode       String?
   oriOfficeName       String?
-  /// Emp number CMO (HCFI) — jika terisi, CMO di leads terkunci ke nomor ini
+  /// Emp number CMO (KIA) — jika terisi, CMO di leads terkunci ke nomor ini
   cmoEmpNo            String?
   /// Emp number salesman dealer (Hyundai Get List Sales Person, mis. H104299)
   salesEmpNo          String?

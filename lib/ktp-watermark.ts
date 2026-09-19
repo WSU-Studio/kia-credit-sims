@@ -5,7 +5,7 @@ import sharp from 'sharp';
  * Applied at upload so S3/local archives and admin previews are marked;
  * first-pass OCR still uses the original client file.
  */
-const DEFAULT_TEXT = 'HCFI · INTERNAL USE ONLY';
+const DEFAULT_TEXT = 'KIA · INTERNAL USE ONLY';
 /**
  * Dual-tone (light fill + dark stroke) stays readable on blue KTP faces.
  * Keep moderate so fallback re-OCR on stored image remains usable.
@@ -76,7 +76,7 @@ function clampOpacity(value: number): number {
 }
 
 /**
- * Rotates by EXIF orientation and composites the HCFI watermark.
+ * Rotates by EXIF orientation and composites the KIA watermark.
  * Caller decides the output format (e.g. `.webp()`).
  */
 export async function applyKtpWatermark(

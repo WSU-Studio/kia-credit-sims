@@ -21,7 +21,7 @@ export function DealerQuotationClient() {
         }
         const vendor = vendorFromProfile(data.user);
         if (!vendor) {
-          throw new Error('Akun belum memiliki penugasan dealer. Hubungi admin HCFI.');
+          throw new Error('Akun belum memiliki penugasan dealer. Hubungi admin KIA.');
         }
         setDealer(vendor);
       })

@@ -1,6 +1,6 @@
 /**
  * Confins / site brand for this fork.
- * HCFI uses HYUNDAI; this repo is the KIA financing site.
+ * KIA uses HYUNDAI; this repo is the KIA financing site.
  *
  * Override the catalog dealer with `BRAND_MASTER_DEALER_CODE` if Confins
  * rotates the KIA master dealer used for national model sync.
