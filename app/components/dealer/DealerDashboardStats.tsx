@@ -13,14 +13,28 @@ type LeadStats = {
   };
 };
 
+function isLeadStats(data: unknown): data is LeadStats {
+  if (!data || typeof data !== 'object') return false;
+  const row = data as Partial<LeadStats>;
+  return (
+    typeof row.total === 'number' &&
+    typeof row.thisMonth === 'number' &&
+    typeof row.byStatus === 'object' &&
+    row.byStatus != null &&
+    typeof row.scope?.isSalesman === 'boolean'
+  );
+}
+
 export function DealerDashboardStats() {
   const [stats, setStats] = useState<LeadStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch('/api/dealer/leads/stats')
-      .then((res) => res.json())
-      .then((data) => setStats(data))
+      .then(async (res) => {
+        const data: unknown = await res.json();
+        setStats(res.ok && isLeadStats(data) ? data : null);
+      })
       .catch(() => setStats(null))
       .finally(() => setLoading(false));
   }, []);

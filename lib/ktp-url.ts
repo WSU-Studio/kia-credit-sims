@@ -10,18 +10,44 @@ export type KtpStorageRef =
 /** Path API dev untuk preview KTP lokal (disimpan di DB sebagai ktpUrl). */
 export const LOCAL_KTP_API_PREFIX = '/api/dev/ktp/';
 
+function stripWrappingQuotes(value: string): string {
+  const trimmed = value.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
+
+/** Accept `/api/dev/ktp/...` even when a locale prefix sits in front (`/id/api/dev/ktp/...`). */
+function localKtpKeyFromPath(pathOrUrl: string): string | null {
+  const idx = pathOrUrl.indexOf(LOCAL_KTP_API_PREFIX);
+  if (idx === -1) return null;
+  try {
+    const key = decodeURIComponent(pathOrUrl.slice(idx + LOCAL_KTP_API_PREFIX.length).split('?')[0]);
+    return isLeadKtpS3Key(key) ? key : null;
+  } catch {
+    return null;
+  }
+}
+
 export function parseKtpStorageUrl(url: string): KtpStorageRef | null {
-  const trimmed = url.trim();
+  const trimmed = stripWrappingQuotes(url);
   if (!trimmed) return null;
+
+  const fromPath = localKtpKeyFromPath(trimmed);
+  if (fromPath) return { kind: 'local', key: fromPath };
+
+  if (isLeadKtpS3Key(trimmed)) {
+    return { kind: 'local', key: trimmed };
+  }
 
   try {
     const u = new URL(trimmed);
-    const encodedKey = u.pathname.startsWith(LOCAL_KTP_API_PREFIX)
-      ? decodeURIComponent(u.pathname.slice(LOCAL_KTP_API_PREFIX.length))
-      : null;
-    if (encodedKey && isLeadKtpS3Key(encodedKey)) {
-      return { kind: 'local', key: encodedKey };
-    }
+    const fromAbs = localKtpKeyFromPath(u.pathname);
+    if (fromAbs) return { kind: 'local', key: fromAbs };
   } catch {
     // not an absolute URL — fall through
   }
@@ -34,13 +60,21 @@ export function parseKtpStorageUrl(url: string): KtpStorageRef | null {
   return null;
 }
 
-export function buildLocalKtpPublicUrl(origin: string, key: string): string {
-  const base = origin.replace(/\/$/, '');
+export function isKtpStorageUrl(url: string): boolean {
+  return parseKtpStorageUrl(url) != null;
+}
+
+export function buildLocalKtpPublicPath(key: string): string {
   const safeKey = key
     .split('/')
     .map((seg) => encodeURIComponent(seg))
     .join('/');
-  return `${base}${LOCAL_KTP_API_PREFIX}${safeKey}`;
+  return `${LOCAL_KTP_API_PREFIX}${safeKey}`;
+}
+
+export function buildLocalKtpPublicUrl(origin: string, key: string): string {
+  const base = origin.replace(/\/$/, '');
+  return `${base}${buildLocalKtpPublicPath(key)}`;
 }
 
 export function resolveKtpUploadOrigin(request: Request): string {

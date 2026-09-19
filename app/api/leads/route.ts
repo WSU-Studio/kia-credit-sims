@@ -66,11 +66,16 @@ export async function POST(request: NextRequest) {
     // Log selalu di server supaya kita tahu kalau ada bot/scanner yang spam,
     // tapi response ke client sengaja generic supaya bot tidak belajar
     // field-field yang missing satu per satu.
+    const submittedKtpUrl =
+      rawBody && typeof rawBody === 'object' && 'ktpUrl' in rawBody
+        ? (rawBody as { ktpUrl?: unknown }).ktpUrl
+        : undefined;
     console.warn(
-      '[leads] schema validation failed ip=%s field=%s message=%s',
+      '[leads] schema validation failed ip=%s field=%s message=%s ktpUrl=%s',
       serverIp,
       fieldPath,
-      firstIssue?.message
+      firstIssue?.message,
+      typeof submittedKtpUrl === 'string' ? submittedKtpUrl : String(submittedKtpUrl)
     );
     return NextResponse.json(
       {

@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { HONEYPOT_FIELD } from './honeypot';
 import { cleanString, looksMalicious } from './sanitize';
 import { normalizePartnerCode } from '@/lib/hyundai-partner';
-import { KTP_OBJECT_PREFIX } from '@/lib/ktp-url';
+import { isKtpStorageUrl } from '@/lib/ktp-url';
 
 const MAX_NAME = 100;
 const MAX_EMAIL = 254; // RFC 5321
@@ -119,41 +119,13 @@ const httpUrlSchema = z
   .max(2048)
   .refine((v) => /^https?:\/\/[^\s<>"']+$/i.test(v), { message: 'URL tidak valid' });
 
-/** KTP storage URL: S3 object under kia_leads_ktp/ or local /api/dev/ktp/... path. */
+/** KTP storage URL: same rules as `parseKtpStorageUrl` (local path, locale-prefixed, or S3). */
 const ktpStorageUrlSchema = z
   .string()
   .max(2048)
-  .refine(
-    (v) => {
-      const trimmed = v.trim();
-      if (!trimmed) return false;
-      if (trimmed.startsWith('/api/dev/ktp/')) {
-        try {
-          const key = decodeURIComponent(trimmed.slice('/api/dev/ktp/'.length));
-          return key.startsWith(KTP_OBJECT_PREFIX) && !key.includes('..') && key.length < 512;
-        } catch {
-          return false;
-        }
-      }
-      if (!/^https?:\/\//i.test(trimmed)) return false;
-      // Absolute URL must still resolve to a known KTP storage ref (S3 or local API).
-      try {
-        const u = new URL(trimmed);
-        if (u.protocol !== 'http:' && u.protocol !== 'https:') return false;
-        if (u.pathname.startsWith('/api/dev/ktp/')) {
-          const key = decodeURIComponent(u.pathname.slice('/api/dev/ktp/'.length));
-          return key.startsWith(KTP_OBJECT_PREFIX) && !key.includes('..') && key.length < 512;
-        }
-        const host = u.hostname;
-        if (!host.endsWith('.amazonaws.com')) return false;
-        const key = decodeURIComponent(u.pathname.replace(/^\//, ''));
-        return key.startsWith(KTP_OBJECT_PREFIX) && !key.includes('..') && key.length < 512;
-      } catch {
-        return false;
-      }
-    },
-    { message: 'ktpUrl harus URL penyimpanan KTP yang valid' }
-  );
+  .refine((v) => isKtpStorageUrl(v), {
+    message: 'ktpUrl harus URL penyimpanan KTP yang valid',
+  });
 
 // const optionalHttpUrl = z
 //   .union([httpUrlSchema, z.literal(''), z.null(), z.undefined()])
@@ -255,8 +227,15 @@ export const leadCreateSchema = z
     fastTrack: z.boolean().optional().default(false),
 
     ktpUrl: z
-      .union([ktpStorageUrlSchema, z.literal(''), z.null(), z.undefined()])
-      .transform((v) => (v == null || v === '' ? null : v)),
+      .union([z.string(), z.literal(''), z.null(), z.undefined()])
+      .transform((v) => {
+        if (v == null || v === '') return null;
+        const trimmed = v.trim();
+        return trimmed === '' ? null : trimmed;
+      })
+      .refine((v) => v == null || isKtpStorageUrl(v), {
+        message: 'ktpUrl harus URL penyimpanan KTP yang valid',
+      }),
     ocrSnapshot: ocrKtpSnapshotSchema.optional().nullable(),
     citizenType: z
       .union([z.enum(['LOCAL', 'FOREIGNER']), z.null(), z.undefined()])

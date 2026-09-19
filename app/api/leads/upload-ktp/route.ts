@@ -9,7 +9,7 @@ import {
 } from '@/lib/ktp-watermark-storage';
 import { getClientIp, leadsLimiter, tooManyRequestsResponse } from '@/lib/ratelimit';
 import { isLocalKtpStorageEnabled } from '@/lib/ktp-storage-mode';
-import { buildLocalKtpPublicUrl, KTP_OBJECT_PREFIX, resolveKtpUploadOrigin } from '@/lib/ktp-url';
+import { buildLocalKtpPublicPath, KTP_OBJECT_PREFIX } from '@/lib/ktp-url';
 import { saveLocalKtpFile } from '@/lib/local-ktp-storage';
 import { toUserFacingS3Error } from '@/lib/s3-error-message';
 import { getPublicS3Url, getS3Bucket, getS3Client, getS3Region } from '@/lib/s3-client';
@@ -62,8 +62,7 @@ export async function POST(request: NextRequest) {
 
     if (isLocalKtpStorageEnabled()) {
       await saveLocalKtpFile(key, webpBuffer);
-      const url = buildLocalKtpPublicUrl(resolveKtpUploadOrigin(request), key);
-      return NextResponse.json({ url });
+      return NextResponse.json({ url: buildLocalKtpPublicPath(key) });
     }
 
     const bucket = getS3Bucket();
