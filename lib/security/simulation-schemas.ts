@@ -264,3 +264,33 @@ export const vehicleImageQuerySchema = z
   .strip();
 
 export type VehicleImageQueryInput = z.infer<typeof vehicleImageQuerySchema>;
+
+/** Public GET `/api/simulation/dealer-promotions/lookup` — vendor from DealerStep. */
+export const dealerPromotionLookupQuerySchema = z
+  .object({
+    vendorCode: hyundaiCode(MAX_DEALER, 'vendorCode'),
+    assetCode: hyundaiCode(MAX_CODE, 'assetCode'),
+    manufYear: z
+      .union([z.string(), z.number(), z.null(), z.undefined()])
+      .transform((v) => {
+        if (v == null || v === '') return null;
+        const n = Number(v);
+        return Number.isFinite(n) ? Math.trunc(n) : Number.NaN;
+      })
+      .refine((v) => v == null || Number.isFinite(v), { message: 'ManufYear tidak valid' })
+      .refine((v) => v == null || (v >= 2000 && v <= 2100), {
+        message: 'ManufYear tidak valid',
+      }),
+    fscCode: optionalSafeText(MAX_CODE),
+    otrPrice: finiteNumber({
+      min: 0,
+      max: 99_000_000_000,
+      label: 'otrPrice',
+      required: false,
+    }),
+  })
+  .strip();
+
+export type DealerPromotionLookupQueryInput = z.infer<
+  typeof dealerPromotionLookupQuerySchema
+>;
