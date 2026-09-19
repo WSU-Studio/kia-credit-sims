@@ -198,7 +198,8 @@ export function DealerPromotionForm({ promotionId }: DealerPromotionFormProps) {
           <option value="">{assetsLoading ? 'Memuat model...' : 'Pilih model'}</option>
           {assets.map((asset) => (
             <option key={asset.AssetCode} value={asset.AssetCode}>
-              {asset.AssetName} — mulai {formatIdr(asset.Price)}
+              {/* {asset.AssetName} — mulai {formatIdr(asset.Price)} */}
+              {asset.AssetName}
             </option>
           ))}
         </select>
