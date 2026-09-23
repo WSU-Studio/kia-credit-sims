@@ -426,6 +426,10 @@ model Lead {
   dpPercent           Float?
   /// Override salesman vs rule Hyundai (`AdminFeeAmt`). Null = pakai nilai API.
   adminFeeAmtOverride Float?
+  /// Confins `AdminFeeBhv` of the selected tenor — submitted with the lead (Hery poin 7).
+  adminFeeBhvOverride String?
+  /// Confins `AdminFeeCptlz` of the selected tenor. Not shown in UI; submitted with the lead.
+  adminFeeCptlzOverride Boolean?
   /// Override salesman vs rule Hyundai (`ProvisionFee` persen). Null = pakai nilai API.
   provisionFeeOverride Float?
   tenor               Int?
