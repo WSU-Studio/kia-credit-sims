@@ -91,8 +91,9 @@ export function PriceStep({
     }).format(value);
   };
 
-  const showDealerPromoColumn =
-    allowDiscountOverride || dealerPromoAmount > 0 || promoLoading;
+  // Hery 23 Sep 2026 poin 15: public must not show dealer promo; quotation still does.
+  // Lookup + accumulatePriceDiscounts still run so AssetDiscAmt / ringkasan stay summed.
+  const showDealerPromoColumn = allowDiscountOverride;
   const additionalReadOnly = lockPromotionDiscount && !allowDiscountOverride;
 
   const handleAdditionalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
