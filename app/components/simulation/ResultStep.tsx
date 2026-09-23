@@ -34,6 +34,7 @@ import {
   provisionPercentOf,
   readAdminFeeAmt,
   readAdminFeeBhv,
+  readAdminFeeCptlz,
   resolveAdminFeeRule,
   type SalesmanFeeCaps,
 } from '@/lib/salesman-fee';
@@ -223,13 +224,21 @@ export function ResultStep({
   const highlightedRow = tableRows.find((r) => r.Tenor === selectedTenor);
   const adminFeeSource = pickAdminFeeSource(highlightedRow, selectedProduct);
   const adminFeeRule = resolveAdminFeeRule(adminFeeSource);
-  const dealerFeeOverride = buildDealerFeeOverrideBody({
+  const dealerFeeOverrideBase = {
     enabled: isDealerSales,
     feeTouched: feeTouchedRef.current,
     rule: adminFeeRule,
     adminFeeAmt,
     adminFeeBhv: readAdminFeeBhv(adminFeeSource),
+    adminFeeCptlz: adminFeeSource ? readAdminFeeCptlz(adminFeeSource) : null,
     provisionPrcnt,
+  };
+  /** Multi-tenor CalculateProductFromRule: only salesman edits. Locked Default-card 0 must not flatten other tenors. */
+  const dealerFeeOverride = buildDealerFeeOverrideBody(dealerFeeOverrideBase);
+  /** Single-tenor FinalCalculate: also send the selected row's locked Confins amount. */
+  const dealerFinalFeeOverride = buildDealerFeeOverrideBody({
+    ...dealerFeeOverrideBase,
+    includeLocked: true,
   });
 
   // Tab promotion hanya relevan saat API mengirim produk promo.
@@ -359,7 +368,7 @@ export function ResultStep({
           firstInstallment,
           isPromotion,
           partnerCode,
-          ...dealerFeeOverride,
+          ...dealerFinalFeeOverride,
         }),
         signal: controller.signal,
       });
@@ -423,7 +432,7 @@ export function ResultStep({
           firstInstallment,
           isPromotion,
           partnerCode,
-          ...dealerFeeOverride,
+          ...dealerFinalFeeOverride,
         }),
       });
       const data = await res.json();
@@ -652,6 +661,15 @@ export function ResultStep({
     setAvailableFirstInstallments([preferred]);
     setTableRows([]);
     setEmptyResult(false);
+  };
+
+  const selectTenorRow = (row: ProductCalculation) => {
+    setSelectedTenor(row.Tenor);
+    if (!isDealerSales) return;
+    feeTouchedRef.current = false;
+    const source = pickAdminFeeSource(row, selectedProduct);
+    const rule = resolveAdminFeeRule(source);
+    setAdminFeeAmt(alignAdminFeeAmt(readAdminFeeAmt(source), rule));
   };
 
   const selectTab = (next: TabKind) => {
@@ -896,7 +914,7 @@ export function ResultStep({
                 adminFee: t('adminFeeLabel'),
                 adminFeeHint: adminFeeRule.locked
                   ? t('adminFeeLockedHint')
-                  : adminFeeRule.bhv === 'MIN'
+                  : adminFeeRule.bhv === 'MIN' || adminFeeRule.bhv === 'LOCK_CPTLZ'
                     ? t('adminFeeMinHint', { min: formatCurrency(adminFeeRule.min) })
                     : adminFeeRule.bhv === 'MAX'
                       ? t('adminFeeMaxHint', { max: formatCurrency(adminFeeRule.max) })
@@ -969,7 +987,8 @@ export function ResultStep({
                     {tableRows.map((r) => (
                       <tr
                         key={r.Tenor}
-                        className={`border-t border-gray-200 ${
+                        onClick={() => selectTenorRow(r)}
+                        className={`border-t border-gray-200 cursor-pointer ${
                           r.Tenor === selectedTenor ? 'bg-[#002c5f]/10' : 'hover:bg-gray-50'
                         }`}
                       >
@@ -978,7 +997,7 @@ export function ResultStep({
                             type="radio"
                             name="tenor"
                             checked={r.Tenor === selectedTenor}
-                            onChange={() => setSelectedTenor(r.Tenor)}
+                            onChange={() => selectTenorRow(r)}
                             className="text-[#002c5f] cursor-pointer"
                           />
                         </td>
@@ -1175,7 +1194,13 @@ export function ResultStep({
                 discount={discount}
                 dpPercent={dpPercent}
                 tenor={highlightedRow?.Tenor}
-                adminFeeAmtOverride={isDealerSales ? adminFeeAmt : null}
+                adminFeeAmtOverride={highlightedRow ? adminFeeAmt : null}
+                adminFeeBhvOverride={
+                  highlightedRow ? readAdminFeeBhv(adminFeeSource) || null : null
+                }
+                adminFeeCptlzOverride={
+                  highlightedRow && adminFeeSource ? readAdminFeeCptlz(adminFeeSource) : null
+                }
                 provisionFeeOverride={isDealerSales ? provisionPrcnt : null}
                 vehicleSummary={
                   vehicle

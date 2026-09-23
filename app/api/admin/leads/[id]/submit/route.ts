@@ -158,6 +158,8 @@ export async function POST(
         salesEmpNo: lead.salesEmpNo,
         source: lead.source,
         adminFeeAmtOverride: lead.adminFeeAmtOverride,
+        adminFeeBhvOverride: lead.adminFeeBhvOverride,
+        adminFeeCptlzOverride: lead.adminFeeCptlzOverride,
         provisionFeeOverride: lead.provisionFeeOverride,
       },
       vendor,

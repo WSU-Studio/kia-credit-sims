@@ -37,6 +37,8 @@ type Lead = {
   dpPercent: number | null;
   tenor: number | null;
   adminFeeAmtOverride?: number | null;
+  adminFeeBhvOverride?: string | null;
+  adminFeeCptlzOverride?: boolean | null;
   provisionFeeOverride?: number | null;
   ipAddress?: string | null;
   latitude?: number | null;

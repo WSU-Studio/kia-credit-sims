@@ -27,6 +27,8 @@ export type LeadSimulationSummarySource = {
   dpPercent: number | null;
   tenor: number | null;
   adminFeeAmtOverride?: number | null;
+  adminFeeBhvOverride?: string | null;
+  adminFeeCptlzOverride?: boolean | null;
   provisionFeeOverride?: number | null;
   vehicleSummary?: string | null;
   assetSnapshot?: unknown;
@@ -138,6 +140,12 @@ export function LeadSimulationSummaryButton({
           partnerCode: lead.partnerCode ?? undefined,
           ...(lead.adminFeeAmtOverride != null
             ? { adminFeeAmt: lead.adminFeeAmtOverride }
+            : {}),
+          ...(lead.adminFeeBhvOverride
+            ? { adminFeeBhv: lead.adminFeeBhvOverride }
+            : {}),
+          ...(lead.adminFeeCptlzOverride != null
+            ? { adminFeeCptlz: lead.adminFeeCptlzOverride }
             : {}),
           ...(lead.provisionFeeOverride != null
             ? { provisionFee: lead.provisionFeeOverride }

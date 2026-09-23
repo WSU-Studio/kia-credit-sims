@@ -14,6 +14,7 @@ export const DEFAULT_MAX_PROVISION_PRCNT = 9;
 export type SalesmanFeeOverride = {
   adminFeeAmt?: number;
   adminFeeBhv?: string;
+  adminFeeCptlz?: boolean;
   /** Persen, mengikuti `ProvisionType: PRCNT` di payload Hyundai. */
   provisionFee?: number;
   provisionType?: string;
@@ -24,30 +25,58 @@ export type SalesmanFeeCaps = {
   maxProvisionPrcnt: number;
 };
 
-export type HyundaiFeeBhv = 'LOCK' | 'MIN' | 'MAX' | 'DEF';
+/**
+ * Confins fee Bhv (Edrizal 21 Sep 2026). DP%/EffRate only use MIN/MAX/DEF/LOCK.
+ * Fee fields: MIN/MAX/DEF/LOCK_ALL/LOCK_CPTLZ/LOCK_AMT.
+ */
+export type HyundaiFeeBhv =
+  | 'MIN'
+  | 'MAX'
+  | 'DEF'
+  | 'LOCK'
+  | 'LOCK_ALL'
+  | 'LOCK_AMT'
+  | 'LOCK_CPTLZ';
 
 export type AdminFeeRule = {
   bhv: HyundaiFeeBhv;
   amount: number;
   min: number;
   max: number;
+  /** Amount input locked (LOCK_ALL, LOCK_AMT, or plain LOCK). */
   locked: boolean;
 };
 
-/** Hyundai `AdminFeeBhv`: Lock / Min / Max / Def (Harry). */
 export function normalizeFeeBhv(raw: string | null | undefined): HyundaiFeeBhv {
   const v = (raw ?? '').trim().toUpperCase().replace(/[\s-]+/g, '_');
-  if (v === 'LOCK' || v === 'LOCK_ALL' || v === 'LOCKALL') return 'LOCK';
+  if (v === 'LOCK_ALL' || v === 'LOCKALL') return 'LOCK_ALL';
+  if (v === 'LOCK_AMT' || v === 'LOCK_AMOUNT' || v === 'LOCKAMT') return 'LOCK_AMT';
+  if (v === 'LOCK_CPTLZ' || v === 'LOCK_CAPITALIZE' || v === 'LOCK_CAPITALISE') {
+    return 'LOCK_CPTLZ';
+  }
+  if (v === 'LOCK') return 'LOCK';
   if (v === 'MIN') return 'MIN';
   if (v === 'MAX') return 'MAX';
   return 'DEF';
 }
 
+/** Amount column disabled. Capitalize checkbox is a separate Confins control (no web UI yet). */
+export function isFeeAmountLocked(bhv: HyundaiFeeBhv): boolean {
+  return bhv === 'LOCK_ALL' || bhv === 'LOCK_AMT' || bhv === 'LOCK';
+}
+
+/** Hery 22 Sep 2026 poin 4: LOCK_* uses the rule amount as a floor. */
+export function isLockFamilyBhv(bhv: HyundaiFeeBhv): boolean {
+  return bhv === 'LOCK' || bhv === 'LOCK_ALL' || bhv === 'LOCK_AMT' || bhv === 'LOCK_CPTLZ';
+}
+
 export type AdminFeeRow = {
   AdminFeeAmt?: unknown;
   AdminFeeBhv?: unknown;
+  AdminFeeCptlz?: unknown;
   adminFeeAmt?: unknown;
   adminFeeBhv?: unknown;
+  adminFeeCptlz?: unknown;
 };
 
 /** Hyundai kadang PascalCase, kadang camelCase. */
@@ -63,10 +92,20 @@ export function readAdminFeeBhv(row: AdminFeeRow | null | undefined): string {
   return String(raw);
 }
 
+export function readAdminFeeCptlz(row: AdminFeeRow | null | undefined): boolean {
+  const raw = row?.AdminFeeCptlz ?? row?.adminFeeCptlz;
+  if (typeof raw === 'boolean') return raw;
+  if (typeof raw === 'string') {
+    const v = raw.trim().toLowerCase();
+    return v === 'true' || v === 'yes' || v === '1';
+  }
+  return raw === 1;
+}
+
 export function resolveAdminFeeRule(row: AdminFeeRow | null | undefined): AdminFeeRule {
   const amount = readAdminFeeAmt(row);
   const bhv = normalizeFeeBhv(readAdminFeeBhv(row));
-  if (bhv === 'LOCK') {
+  if (isFeeAmountLocked(bhv)) {
     return { bhv, amount, min: amount, max: amount, locked: true };
   }
   if (bhv === 'MIN') {
@@ -75,21 +114,22 @@ export function resolveAdminFeeRule(row: AdminFeeRow | null | undefined): AdminF
   if (bhv === 'MAX') {
     return { bhv, amount, min: 0, max: amount, locked: false };
   }
+  // LOCK_CPTLZ: amount still editable (3e) but cannot go below the rule (poin 4).
+  if (isLockFamilyBhv(bhv)) {
+    return { bhv, amount, min: amount, max: ADMIN_FEE_TECHNICAL_MAX_AMT, locked: false };
+  }
+  // DEF: amount prefilled, still editable down to 0.
   return { bhv, amount, min: 0, max: ADMIN_FEE_TECHNICAL_MAX_AMT, locked: false };
 }
 
 /**
- * LOCK dari kartu GetListDefaultProductFromRule atau tenor CalculateProductFromRule
- * harus menang dari DEF 3jt di sisi lain. Primary = tenor (UI) / detail (merge).
+ * Prefer the selected tenor / FromRule detail row. Do not let a Default product
+ * card LOCK_ALL override a different tenor's AdminFeeAmt (Edrizal poin 15–16).
  */
 export function pickAdminFeeSource(
   primary: AdminFeeRow | null | undefined,
   secondary: AdminFeeRow | null | undefined
 ): AdminFeeRow | null {
-  const primaryRule = resolveAdminFeeRule(primary);
-  const secondaryRule = resolveAdminFeeRule(secondary);
-  if (primary && primaryRule.locked) return primary;
-  if (secondary && secondaryRule.locked) return secondary;
   return primary ?? secondary ?? null;
 }
 
@@ -106,15 +146,24 @@ export function buildDealerFeeOverrideBody(input: {
   rule: AdminFeeRule;
   adminFeeAmt: number;
   adminFeeBhv?: string | null;
+  adminFeeCptlz?: boolean | null;
   provisionPrcnt: number;
+  /**
+   * Send a locked Confins amount without salesman edit.
+   * Only for single-tenor FinalCalculate. CalculateProductFromRule returns
+   * every tenor at once — a Default-card LOCK_ALL 0 would flatten tenor 12's 3jt.
+   */
+  includeLocked?: boolean;
 }): Record<string, unknown> {
-  if (!input.enabled || (!input.feeTouched && !input.rule.locked)) return {};
+  const sendLocked = Boolean(input.includeLocked && input.rule.locked);
+  if (!input.enabled || (!input.feeTouched && !sendLocked)) return {};
   const admin = {
     adminFeeAmt: input.rule.locked ? input.rule.amount : input.adminFeeAmt,
     ...(input.adminFeeBhv ? { adminFeeBhv: input.adminFeeBhv } : {}),
+    ...(input.adminFeeCptlz != null ? { adminFeeCptlz: input.adminFeeCptlz } : {}),
   };
-  // LOCK dari Confins boleh dikirim tanpa sentuh stepper — jangan ikut men-set provision 0.
-  if (!input.feeTouched && input.rule.locked) return admin;
+  // Amount-lock from Confins may send without touching the stepper — don't zero provision.
+  if (!input.feeTouched && sendLocked) return admin;
   return { ...admin, provisionFee: input.provisionPrcnt };
 }
 
@@ -200,7 +249,7 @@ export function clampSalesmanFeeOverride(
   override: SalesmanFeeOverride,
   caps: SalesmanFeeCaps
 ): SalesmanFeeOverride {
-  const locked = normalizeFeeBhv(override.adminFeeBhv) === 'LOCK';
+  const locked = isFeeAmountLocked(normalizeFeeBhv(override.adminFeeBhv));
   return {
     adminFeeAmt:
       override.adminFeeAmt != null
@@ -214,6 +263,7 @@ export function clampSalesmanFeeOverride(
             )
         : undefined,
     adminFeeBhv: override.adminFeeBhv,
+    adminFeeCptlz: override.adminFeeCptlz,
     provisionFee:
       override.provisionFee != null
         ? snapToStep(override.provisionFee, PROVISION_FEE_STEP_PRCNT, 0, caps.maxProvisionPrcnt)
@@ -233,10 +283,12 @@ export function buildHyundaiFeeRequestFields(
   const fields: Record<string, unknown> = {};
   if (override.adminFeeAmt != null) {
     fields.AdminFeeAmt = override.adminFeeAmt;
-    fields.AdminFeeCptlz = false;
-    if (override.adminFeeBhv) {
-      fields.AdminFeeBhv = override.adminFeeBhv;
-    }
+    fields.AdminFeeCptlz = override.adminFeeCptlz ?? false;
+  } else if (override.adminFeeCptlz != null) {
+    fields.AdminFeeCptlz = override.adminFeeCptlz;
+  }
+  if (override.adminFeeBhv) {
+    fields.AdminFeeBhv = override.adminFeeBhv;
   }
   if (override.provisionFee != null) {
     fields.ProvisionType = override.provisionType || 'PRCNT';
@@ -250,6 +302,7 @@ export function buildHyundaiFeeRequestFields(
 export function parseSalesmanFeeOverride(input: {
   adminFeeAmt?: unknown;
   adminFeeBhv?: unknown;
+  adminFeeCptlz?: unknown;
   provisionFee?: unknown;
 } | null | undefined): SalesmanFeeOverride | null {
   if (!input) return null;
@@ -265,7 +318,37 @@ export function parseSalesmanFeeOverride(input: {
   return {
     ...(hasAdmin ? { adminFeeAmt } : {}),
     ...(adminFeeBhv ? { adminFeeBhv } : {}),
+    ...(input.adminFeeCptlz != null
+      ? { adminFeeCptlz: readAdminFeeCptlz({ AdminFeeCptlz: input.adminFeeCptlz }) }
+      : {}),
     ...(hasProvision ? { provisionFee } : {}),
+    provisionType: 'PRCNT',
+  };
+}
+
+/**
+ * Snapshot tenor rule for Mobile Loan (Hery poin 7): Amt + Bhv + Cptlz.
+ * Amt 0 (LOCK_ALL) still counts — do not treat 0 as "no override".
+ */
+export function buildLeadHyundaiFeeOverride(lead: {
+  adminFeeAmtOverride?: number | null;
+  adminFeeBhvOverride?: string | null;
+  adminFeeCptlzOverride?: boolean | null;
+  provisionFeeOverride?: number | null;
+}): SalesmanFeeOverride | null {
+  const hasAdmin = lead.adminFeeAmtOverride != null && Number.isFinite(lead.adminFeeAmtOverride);
+  const bhv =
+    typeof lead.adminFeeBhvOverride === 'string' && lead.adminFeeBhvOverride.trim()
+      ? lead.adminFeeBhvOverride.trim()
+      : undefined;
+  const hasCptlz = lead.adminFeeCptlzOverride != null;
+  const hasProv = lead.provisionFeeOverride != null && Number.isFinite(lead.provisionFeeOverride);
+  if (!hasAdmin && !bhv && !hasCptlz && !hasProv) return null;
+  return {
+    ...(hasAdmin ? { adminFeeAmt: Number(lead.adminFeeAmtOverride) } : {}),
+    ...(bhv ? { adminFeeBhv: bhv } : {}),
+    ...(hasCptlz ? { adminFeeCptlz: Boolean(lead.adminFeeCptlzOverride) } : {}),
+    ...(hasProv ? { provisionFee: Number(lead.provisionFeeOverride) } : {}),
     provisionType: 'PRCNT',
   };
 }

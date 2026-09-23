@@ -212,6 +212,18 @@ export const leadCreateSchema = z
       .refine((v) => v == null || v >= 0, { message: 'AdminFeeAmt minimal 0' })
       .refine((v) => v == null || v <= 50_000_000, { message: 'AdminFeeAmt terlalu besar' })
       .optional(),
+    adminFeeBhvOverride: z
+      .union([z.string(), z.null(), z.undefined()])
+      .transform((v) => {
+        if (v == null) return null;
+        const s = v.trim();
+        return s.length > 0 && s.length <= 24 ? s : null;
+      })
+      .optional(),
+    adminFeeCptlzOverride: z
+      .union([z.boolean(), z.null(), z.undefined()])
+      .transform((v) => (typeof v === 'boolean' ? v : null))
+      .optional(),
     provisionFeeOverride: z
       .union([z.number(), z.string(), z.null(), z.undefined()])
       .transform((v) => {

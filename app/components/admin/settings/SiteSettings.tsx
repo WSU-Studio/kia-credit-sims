@@ -492,9 +492,9 @@ export function SiteSettings() {
         <h2 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">
           Fee Quotation Salesman
         </h2>
-        <p className="text-sm text-gray-600">
-          Admin fee mengikuti rule Hyundai (<code className="text-xs">AdminFeeBhv</code>: Lock / Min / Max / Def) pada produk kredit, bukan cap CMS. Provision tetap bisa di-step kelipatan 0,5% sampai batas di bawah.
-        </p>
+        {/* <p className="text-xs text-gray-600">
+          Admin fee mengikuti baris tenor (<code>AdminFeeBhv</code>: MIN / MAX / DEF / LOCK_ALL / LOCK_AMT / LOCK_CPTLZ). <code>LOCK_*</code> memakai nominal rule sebagai minimum.
+        </p> */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Maks. provision (%)

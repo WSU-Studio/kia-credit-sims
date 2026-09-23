@@ -188,6 +188,9 @@ export async function POST(request: NextRequest) {
         data.adminFeeAmtOverride != null && Number.isFinite(data.adminFeeAmtOverride)
           ? data.adminFeeAmtOverride
           : null,
+      adminFeeBhvOverride: data.adminFeeBhvOverride?.trim() || null,
+      adminFeeCptlzOverride:
+        typeof data.adminFeeCptlzOverride === 'boolean' ? data.adminFeeCptlzOverride : null,
       provisionFeeOverride:
         data.provisionFeeOverride != null && Number.isFinite(data.provisionFeeOverride)
           ? data.provisionFeeOverride
