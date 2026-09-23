@@ -7,6 +7,7 @@ import { PreSimulationSummaryView } from '@/app/components/simulation/PreSimulat
 import { parseLeadSummarySnapshot } from '@/lib/lead-summary-snapshot';
 import { BRAND } from '@/lib/brand';
 import { buildPromoSimulationHref } from '@/lib/promo-simulation';
+import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
