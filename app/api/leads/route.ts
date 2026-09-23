@@ -207,9 +207,10 @@ export async function POST(request: NextRequest) {
       simulationLeadNo: data.simulationLeadNo,
       status: 'NEW',
       source,
-      // SupplierEmpNo yang terkirim ke Hyundai saat AddLeadAsset — disimpan
-      // sebagai pembanding data dengan Adins.
-      salesEmpNo: draft.salesEmpNo ?? null,
+      // SupplierEmpNo hanya disimpan untuk quotation dealer. Website publik
+      // tidak boleh inherit emp dari cookie sesi portal di draft.
+      salesEmpNo:
+        source === LEAD_SOURCES.DEALER_SALES ? draft.salesEmpNo ?? null : null,
       salesUserId,
       summarySnapshot:
         data.summarySnapshot && typeof data.summarySnapshot === 'object'

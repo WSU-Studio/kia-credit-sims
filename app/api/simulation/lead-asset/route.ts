@@ -25,6 +25,7 @@ import {
 import { leadAssetDraftSchema } from '@/lib/security/schemas';
 import { isHoneypotTripped, HONEYPOT_FIELD } from '@/lib/security/honeypot';
 import { resolveAddLeadAssetChannelCode } from '@/lib/hyundai-channel-code';
+import { LEAD_SOURCES } from '@/lib/lead-source';
 
 /**
  * Hyundai Fase 1: Add Lead Asset.
@@ -32,9 +33,10 @@ import { resolveAddLeadAssetChannelCode } from '@/lib/hyundai-channel-code';
  * yang akan dipakai pada semua call Fase 2 (Financial Data) di Step 5 (ResultStep).
  *
  * `SupplierEmpNo`:
- *   - Website publik: "" (kosong) — CMO assignment dilakukan di back-office admin.
- *   - Dealer quotation: diisi `salesEmpNo` salesman yang login (diambil dari DB
- *     via session, bukan dari input client) selama dealer request = dealer user.
+ *   - Website publik / promo-landing: "" (kosong) — CMO assignment di back-office.
+ *     Cookie sesi dealer tidak boleh ikut; channel tetap `WEBSITE_CUST`.
+ *   - Dealer quotation: diisi `salesEmpNo` salesman yang login (dari DB via
+ *     session, bukan body) selama dealer request = dealer user.
  *
  * `MrChannelCode` (Postman v1.10, ref_master MR_CHANNEL_CODE):
  *   - Website publik / pre-sim: `WEBSITE_CUST`
@@ -146,27 +148,29 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Dealer quotation: kirim emp number salesman yang login sebagai SupplierEmpNo.
-  // Diambil dari DB via session (bukan body request) supaya tidak bisa di-spoof,
-  // dan hanya jika dealer yang diquotation sama dengan dealer penugasan user.
+  // SupplierEmpNo hanya untuk quotation dealer. Website publik / promo-landing
+  // harus kosong walau browser masih punya cookie sesi portal (testing di
+  // dev sering buka /credit-simulation sambil login salesman).
   let supplierEmpNo = '';
   let isAuthenticatedDealerSales = false;
-  try {
-    const session = await auth();
-    if (
-      session?.user?.id &&
-      isDealerPortalUser(session.user.userType) &&
-      session.user.vendorCode?.trim() === vendor.VendorCode
-    ) {
-      isAuthenticatedDealerSales = true;
-      const salesUser = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { salesEmpNo: true },
-      });
-      supplierEmpNo = salesUser?.salesEmpNo?.trim() ?? '';
+  if (parsed.data.source === LEAD_SOURCES.DEALER_SALES) {
+    try {
+      const session = await auth();
+      if (
+        session?.user?.id &&
+        isDealerPortalUser(session.user.userType) &&
+        session.user.vendorCode?.trim() === vendor.VendorCode
+      ) {
+        isAuthenticatedDealerSales = true;
+        const salesUser = await prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: { salesEmpNo: true },
+        });
+        supplierEmpNo = salesUser?.salesEmpNo?.trim() ?? '';
+      }
+    } catch (sessionErr) {
+      console.warn('[lead-asset] failed to resolve salesEmpNo from session:', sessionErr);
     }
-  } catch (sessionErr) {
-    console.warn('[lead-asset] failed to resolve salesEmpNo from session:', sessionErr);
   }
 
   const mrChannelCode = resolveAddLeadAssetChannelCode({

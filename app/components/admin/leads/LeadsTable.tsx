@@ -546,7 +546,7 @@ export function LeadsTable() {
                         <div className="text-xs text-gray-500">{lead.email}</div>
                         <div className="mt-1 flex flex-wrap items-center gap-1 text-xs text-gray-500">
                           <ConfinsChannelBadge source={lead.source} />
-                          {lead.salesEmpNo && (
+                          {lead.source === LEAD_SOURCES.DEALER_SALES && lead.salesEmpNo && (
                             <span
                               className="inline-flex rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-mono font-medium text-green-800"
                               title="Emp salesman dealer (SupplierEmpNo di AddLeadAsset)"

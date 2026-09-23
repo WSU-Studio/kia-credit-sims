@@ -5,9 +5,9 @@ import { prisma } from '@/lib/prisma';
 import { Container } from '@/app/components/ui/Container';
 import { PreSimulationSummaryView } from '@/app/components/simulation/PreSimulationSummaryView';
 import { parseLeadSummarySnapshot } from '@/lib/lead-summary-snapshot';
+import { Link } from '@/i18n/navigation';
 import { BRAND } from '@/lib/brand';
 import { buildPromoSimulationHref } from '@/lib/promo-simulation';
-import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
