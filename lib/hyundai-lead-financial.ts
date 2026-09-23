@@ -4,6 +4,7 @@ import { integrationRequestBody } from '@/lib/hyundai-integration-request';
 import { resolveHyundaiProductFromSimulation } from '@/lib/hyundai-product-map';
 import { resolveIsPartner } from '@/lib/hyundai-partner';
 import type { FinalSummaryInfo } from '@/app/types/credit-simulation';
+import { hydrateLeadSummaryAmounts } from '@/lib/lead-summary-amounts';
 import {
   buildHyundaiFeeRequestFields,
   type SalesmanFeeOverride,
@@ -113,7 +114,7 @@ export function mapSummaryInfoToFinalSummary(
   }
   if (!assetDownPaymentPrcnt) assetDownPaymentPrcnt = fallbacks.dpPercent ?? 0;
 
-  return {
+  return hydrateLeadSummaryAmounts({
     productName:
       strField(summary, 'ProductName', 'productName') ||
       parseProductNameHint(fallbacks.productName) ||
@@ -140,14 +141,18 @@ export function mapSummaryInfoToFinalSummary(
       summary,
       'AssetInsPaidAmt',
       'assetInsPaidAmt',
-      'AssetInsurancePaidAmt'
+      'AssetInsurancePaidAmt',
+      'TotalInsCustAmt',
+      'totalInsCustAmt',
+      'InsCustAmt',
+      'AssetInsCustAmt'
     ),
     feePaidAmt: numField(summary, 'FeePaidAmt', 'feePaidAmt', 'FeePaidByCustomerAmt'),
     balloonAmt: numField(summary, 'BalloonAmt', 'balloonAmt'),
     adminFeeAmt: numField(summary, 'AdminFeeAmt', 'adminFeeAmt') || undefined,
     fiduciaFeeAmt: numField(summary, 'FiduciaFeeAmt', 'fiduciaFeeAmt', 'FiduciaAmt') || undefined,
     firstInstallment: fallbacks.firstInstallment,
-  };
+  });
 }
 
 function pickSimulateRowForTenor(
@@ -608,14 +613,20 @@ export async function bootstrapLeadFinancialAndInsurance(params: {
     { ...logMeta, endpoint: 'SaveFinalCalculateResult' }
   );
 
-  return mapSummaryInfoToFinalSummary(finalRes.SummaryInfoObj, {
-    productName: product.ProductName,
-    productCode: product.ProductCode,
-    firstInstallment,
-    otrPrice: params.otrPrice,
-    dpPercent: params.dpPercent,
-    tenor: params.tenor,
-  });
+  return mapSummaryInfoToFinalSummary(
+    {
+      ...(finalRes.SaveLeadFinDataObj ?? {}),
+      ...finalRes.SummaryInfoObj,
+    },
+    {
+      productName: product.ProductName,
+      productCode: product.ProductCode,
+      firstInstallment,
+      otrPrice: params.otrPrice,
+      dpPercent: params.dpPercent,
+      tenor: params.tenor,
+    }
+  );
 }
 
 /** Alias eksplisit untuk View Summary / PDF — same chain, return mapped summary. */

@@ -4,8 +4,7 @@ import { getTranslations } from 'next-intl/server';
 import { prisma } from '@/lib/prisma';
 import { Container } from '@/app/components/ui/Container';
 import { PreSimulationSummaryView } from '@/app/components/simulation/PreSimulationSummaryView';
-import type { FinalSummaryInfo } from '@/app/types/credit-simulation';
-import { Link } from '@/i18n/navigation';
+import { parseLeadSummarySnapshot } from '@/lib/lead-summary-snapshot';
 import { BRAND } from '@/lib/brand';
 import { buildPromoSimulationHref } from '@/lib/promo-simulation';
 
@@ -15,11 +14,8 @@ type PageProps = {
   params: Promise<{ locale: string; slug: string }>;
 };
 
-function asFinalSummary(raw: unknown): FinalSummaryInfo | null {
-  if (!raw || typeof raw !== 'object') return null;
-  const s = raw as Record<string, unknown>;
-  if (typeof s.productName !== 'string' || typeof s.instAmt !== 'number') return null;
-  return raw as FinalSummaryInfo;
+function asFinalSummary(raw: unknown) {
+  return parseLeadSummarySnapshot(raw);
 }
 
 async function getPreSim(slug: string) {

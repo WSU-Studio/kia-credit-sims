@@ -46,10 +46,14 @@ function buildMockFinalSummary(params: {
     params.firstInstallment === 'ADDM'
       ? dpAmt + instAmt + assetInsPaidAmt + feePaidAmt
       : dpAmt + assetInsPaidAmt + feePaidAmt;
+  const balloonAmt =
+    params.productCode.toUpperCase() === 'BL'
+      ? Math.round(ntfAmt * 0.6)
+      : 0;
   const totalPaymentAmt =
-    params.firstInstallment === 'ADDM'
+    (params.firstInstallment === 'ADDM'
       ? totalDownPaymentAmt + instAmt * (params.tenor - 1)
-      : totalDownPaymentAmt + instAmt * params.tenor;
+      : totalDownPaymentAmt + instAmt * params.tenor) + balloonAmt;
 
   return {
     productName: params.productName,
@@ -65,10 +69,7 @@ function buildMockFinalSummary(params: {
     downPaymentAmt: dpAmt,
     assetInsPaidAmt,
     feePaidAmt,
-    balloonAmt:
-      params.productCode.toUpperCase() === 'BL'
-        ? Math.round(ntfAmt * 0.6)
-        : 0,
+    balloonAmt,
     firstInstallment: params.firstInstallment,
   };
 }

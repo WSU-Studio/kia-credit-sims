@@ -7,6 +7,7 @@ import type { FinalSummaryInfo } from '@/app/types/credit-simulation';
 import { IconX, IconDownload, IconLoader2 } from '@tabler/icons-react';
 import { SimulationRetryError } from '@/app/components/simulation/SimulationRetryError';
 import { resolveCustomerFeeBreakdown } from '@/lib/lead-summary-snapshot';
+import { hydrateLeadSummaryAmounts } from '@/lib/lead-summary-amounts';
 
 type LetterheadData = {
   name: string;
@@ -196,19 +197,22 @@ export function SimulationSummaryModal({
     summary?.firstInstallment === 'ADDB' || summary?.firstInstallment === 'ADDM'
       ? summary.firstInstallment
       : firstInstallment;
+  const displaySummary = summary
+    ? hydrateLeadSummaryAmounts({ ...summary, firstInstallment: resolvedInstallment })
+    : null;
   const installLabel =
     resolvedInstallment === 'ADDM' ? t('installmentAmountAddm') : t('installmentAmountAddb');
 
   // Subsidy belum ada nama field dari Richard — tetap placeholder 0.
   const subsidyAmt = 0;
-  const assetInsurancePaid = summary?.assetInsPaidAmt ?? 0;
-  const feePaidByCustomer = summary?.feePaidAmt ?? 0;
-  const customerFees = summary ? resolveCustomerFeeBreakdown(summary) : null;
-  const balloonAmt = Number(summary?.balloonAmt) || 0;
+  const assetInsurancePaid = displaySummary?.assetInsPaidAmt ?? 0;
+  const feePaidByCustomer = displaySummary?.feePaidAmt ?? 0;
+  const customerFees = displaySummary ? resolveCustomerFeeBreakdown(displaySummary) : null;
+  const balloonAmt = Number(displaySummary?.balloonAmt) || 0;
   const showBalloonAmt = balloonAmt > 0;
 
   const handleDownloadPdf = async () => {
-    if (!summary) return;
+    if (!displaySummary) return;
 
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
     const left = 14;
@@ -254,7 +258,7 @@ export function SimulationSummaryModal({
     doc.setFont('helvetica', 'bold');
     doc.text(t('summaryProductSectionTitle'), left, y);
     doc.setFont('helvetica', 'normal');
-    doc.text(summary.productName, left, y + 6);
+    doc.text(displaySummary.productName, left, y + 6);
     y += 12;
     if (leadNo) {
       doc.text(`${t('summaryLeadNoLabel')}: ${leadNo}`, left, (y += 5));
@@ -282,23 +286,23 @@ export function SimulationSummaryModal({
     doc.text(t('summarySectionTitle'), left, y);
     y += 6;
     doc.setFont('helvetica', 'normal');
-    doc.text(`${t('summaryDownPaymentPercentLabel')}: ${summary.assetDownPaymentPrcnt}%`, left, (y += 5));
-    // doc.text(`${t('tenor')}: ${t('tenorWithMonths', { tenor: summary.tenor })}`, left, (y += 5));
-    // doc.text(`${t('summaryFlatRatePercentLabel')}: ${summary.flatRatePrcnt}%`, left, (y += 5));
-    doc.text(`${installLabel}: ${formatRp(summary.instAmt)}`, left, (y += 5));
+    doc.text(`${t('summaryDownPaymentPercentLabel')}: ${displaySummary.assetDownPaymentPrcnt}%`, left, (y += 5));
+    // doc.text(`${t('tenor')}: ${t('tenorWithMonths', { tenor: displaySummary.tenor })}`, left, (y += 5));
+    // doc.text(`${t('summaryFlatRatePercentLabel')}: ${displaySummary.flatRatePrcnt}%`, left, (y += 5));
+    doc.text(`${installLabel}: ${formatRp(displaySummary.instAmt)}`, left, (y += 5));
     if (showBalloonAmt) {
       doc.text(`${t('balloonAmount')}: ${formatRp(balloonAmt)}`, left, (y += 5));
     }
-    doc.text(`${t('summaryTotalDownPaymentLabel')}: ${formatRp(summary.totalDownPaymentAmt)}`, left, (y += 5));
-    doc.text(`${t('summaryTotalPaymentLabel')}: ${formatRp(summary.totalPaymentAmt)}`, left, (y += 5));
+    doc.text(`${t('summaryTotalDownPaymentLabel')}: ${formatRp(displaySummary.totalDownPaymentAmt)}`, left, (y += 5));
+    doc.text(`${t('summaryTotalPaymentLabel')}: ${formatRp(displaySummary.totalPaymentAmt)}`, left, (y += 5));
     y += 8;
 
     doc.setFont('helvetica', 'bold');
     doc.text(t('summaryTotalDownPaymentSectionTitle'), left, y);
     y += 6;
     doc.setFont('helvetica', 'normal');
-    doc.text(`${t('summaryDownPaymentLabel')}: ${formatRp(summary.downPaymentAmt)}`, left, (y += 5));
-    doc.text(`${t('summaryInstallmentAmountLabel')}: ${formatRp(summary.instAmt)}`, left, (y += 5));
+    doc.text(`${t('summaryDownPaymentLabel')}: ${formatRp(displaySummary.downPaymentAmt)}`, left, (y += 5));
+    doc.text(`${t('summaryInstallmentAmountLabel')}: ${formatRp(displaySummary.instAmt)}`, left, (y += 5));
     doc.text(`${t('summaryAssetInsurancePaidLabel')}: ${formatRp(assetInsurancePaid)}`, left, (y += 5));
     if (customerFees && customerFees.adminFeeAmt > 0) {
       doc.text(`${t('summaryAdminFeeLabel')}: ${formatRp(customerFees.adminFeeAmt)}`, left, (y += 5));
@@ -320,7 +324,7 @@ export function SimulationSummaryModal({
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
     doc.text(`${t('summarySubsidyAmountLabel')}: (${formatRp(subsidyAmt)})`, left, (y += 5));
-    doc.text(`${t('summaryTotalDownPaymentLabel')}: ${formatRp(summary.totalDownPaymentAmt)}`, left, (y += 5));
+    doc.text(`${t('summaryTotalDownPaymentLabel')}: ${formatRp(displaySummary.totalDownPaymentAmt)}`, left, (y += 5));
     y += 8;
 
     doc.setFont('helvetica', 'bold');
@@ -328,14 +332,14 @@ export function SimulationSummaryModal({
     y += 6;
     doc.setFont('helvetica', 'normal');
     if (discount > 0) {
-      doc.text(`${t('summaryInitialAssetPriceLabel')}: ${formatRp(summary.assetPriceAmt + discount)}`, left, (y += 5));
+      doc.text(`${t('summaryInitialAssetPriceLabel')}: ${formatRp(displaySummary.assetPriceAmt + discount)}`, left, (y += 5));
       doc.text(`${t('summaryDiscountLabel')}: (${formatRp(discount)})`, left, (y += 5));
     }
-    doc.text(`${t('summaryTotalAssetPriceLabel')}: ${formatRp(summary.assetPriceAmt)}`, left, (y += 5));
-    doc.text(`${t('summaryDownPaymentLabel')}: (${formatRp(summary.downPaymentAmt)})`, left, (y += 5));
-    doc.text(`${t('summaryNtfAmountLabel')}: ${formatRp(summary.ntfAmt)}`, left, (y += 5));
+    doc.text(`${t('summaryTotalAssetPriceLabel')}: ${formatRp(displaySummary.assetPriceAmt)}`, left, (y += 5));
+    doc.text(`${t('summaryDownPaymentLabel')}: (${formatRp(displaySummary.downPaymentAmt)})`, left, (y += 5));
+    doc.text(`${t('summaryNtfAmountLabel')}: ${formatRp(displaySummary.ntfAmt)}`, left, (y += 5));
 
-    doc.save(`${t('summaryPdfFileName')}-${summary.productCode ?? 'summary'}.pdf`);
+    doc.save(`${t('summaryPdfFileName')}-${displaySummary.productCode ?? 'summary'}.pdf`);
   };
 
   if (!open) return null;
@@ -391,13 +395,13 @@ export function SimulationSummaryModal({
             />
           )}
 
-          {!loading && !error && summary && (
+          {!loading && !error && displaySummary && (
             <>
               <section>
                 <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-2">
                   {t('summaryProductSectionTitle')}
                 </h3>
-                <p className="text-gray-900 font-medium">{summary.productName}</p>
+                <p className="text-gray-900 font-medium">{displaySummary.productName}</p>
                 {leadNo && (
                   <dl className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">
                     <dt className="text-gray-500">{t('summaryLeadNoLabel')}</dt>
@@ -451,11 +455,11 @@ export function SimulationSummaryModal({
                 </h3>
                 <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">
                   <dt className="text-gray-500">{t('summaryDownPaymentPercentLabel')}</dt>
-                  <dd className="font-medium text-gray-900">{summary.assetDownPaymentPrcnt}</dd>
+                  <dd className="font-medium text-gray-900">{displaySummary.assetDownPaymentPrcnt}</dd>
                   {/* <dt className="text-gray-500">{t('tenor')}</dt>
-                  <dd className="font-medium text-gray-900">{summary.tenor}</dd>
+                  <dd className="font-medium text-gray-900">{displaySummary.tenor}</dd>
                   <dt className="text-gray-500">{t('summaryFlatRatePercentLabel')}</dt>
-                  <dd className="font-medium text-gray-900">{summary.flatRatePrcnt}</dd> */}
+                  <dd className="font-medium text-gray-900">{displaySummary.flatRatePrcnt}</dd> */}
                   <dt className="text-gray-500">{t('summaryInsuranceTypeLabel')}</dt>
                   <dd className="font-medium text-gray-900">{t('summaryInsuranceTypeValue')}</dd>
                   <dt className="text-gray-500">{t('summaryInsurancePaymentTypeLabel')}</dt>
@@ -463,7 +467,7 @@ export function SimulationSummaryModal({
                   <dt className="text-gray-500">{t('summaryFeePaymentTypeLabel')}</dt>
                   <dd className="font-medium text-gray-900">{t('summaryInAdvanceValue')}</dd>
                   <dt className="text-gray-500">{installLabel}</dt>
-                  <dd className="font-semibold text-gray-900">{formatRp(summary.instAmt)}</dd>
+                  <dd className="font-semibold text-gray-900">{formatRp(displaySummary.instAmt)}</dd>
                   {showBalloonAmt && (
                     <>
                       <dt className="text-gray-500">{t('balloonAmount')}</dt>
@@ -476,9 +480,9 @@ export function SimulationSummaryModal({
                     </>
                   )}
                   <dt className="text-gray-500">{t('summaryTotalDownPaymentLabel')}</dt>
-                  <dd className="font-semibold text-gray-900">{formatRp(summary.totalDownPaymentAmt)}</dd>
+                  <dd className="font-semibold text-gray-900">{formatRp(displaySummary.totalDownPaymentAmt)}</dd>
                   <dt className="text-gray-500">{t('summaryTotalPaymentLabel')}</dt>
-                  <dd className="font-semibold text-[#002c5f]">{formatRp(summary.totalPaymentAmt)}</dd>
+                  <dd className="font-semibold text-[#002c5f]">{formatRp(displaySummary.totalPaymentAmt)}</dd>
                 </dl>
               </section>
 
@@ -488,13 +492,13 @@ export function SimulationSummaryModal({
                 </h3>
                 <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">
                   <dt className="text-gray-500">{t('summaryDownPaymentLabel')}</dt>
-                  <dd className="font-medium text-gray-900">{formatRp(summary.downPaymentAmt)}</dd>
+                  <dd className="font-medium text-gray-900">{formatRp(displaySummary.downPaymentAmt)}</dd>
                   <dt className="text-gray-500">{t('summaryInstallmentAmountLabel')}</dt>
-                  <dd className="font-medium text-gray-900">{formatRp(summary.instAmt)}</dd>
+                  <dd className="font-medium text-gray-900">{formatRp(displaySummary.instAmt)}</dd>
                   <dt className="text-gray-500">{t('summaryAssetInsurancePaidLabel')}</dt>
                   <dd className="font-medium text-gray-900">{formatRp(assetInsurancePaid)}</dd>
                   <CustomerFeeBreakdownRows
-                    summary={summary}
+                    summary={displaySummary}
                     feePaidByCustomer={feePaidByCustomer}
                     formatRp={formatRp}
                     t={t}
@@ -502,7 +506,7 @@ export function SimulationSummaryModal({
                   <dt className="text-gray-500">{t('summarySubsidyAmountLabel')}</dt>
                   <dd className="font-medium text-gray-900">({formatRp(subsidyAmt)})</dd>
                   <dt className="text-gray-500">{t('summaryTotalDownPaymentLabel')}</dt>
-                  <dd className="font-semibold text-gray-900">{formatRp(summary.totalDownPaymentAmt)}</dd>
+                  <dd className="font-semibold text-gray-900">{formatRp(displaySummary.totalDownPaymentAmt)}</dd>
                 </dl>
               </section>
 
@@ -514,19 +518,19 @@ export function SimulationSummaryModal({
                   {discount > 0 && (
                     <>
                       <dt className="text-gray-500">{t('summaryInitialAssetPriceLabel')}</dt>
-                      <dd className="font-medium text-gray-900">{formatRp(summary.assetPriceAmt + discount)}</dd>
+                      <dd className="font-medium text-gray-900">{formatRp(displaySummary.assetPriceAmt + discount)}</dd>
                       <dt className="text-gray-500">{t('summaryDiscountLabel')}</dt>
                       <dd className="font-medium text-red-600">({formatRp(discount)})</dd>
                     </>
                   )}
                   <dt className="text-gray-500">{t('summaryTotalAssetPriceLabel')}</dt>
-                  <dd className="font-medium text-gray-900">{formatRp(summary.assetPriceAmt)}</dd>
+                  <dd className="font-medium text-gray-900">{formatRp(displaySummary.assetPriceAmt)}</dd>
                   <dt className="text-gray-500">{t('summaryDownPaymentLabel')}</dt>
-                  <dd className="font-medium text-gray-900">({formatRp(summary.downPaymentAmt)})</dd>
+                  <dd className="font-medium text-gray-900">({formatRp(displaySummary.downPaymentAmt)})</dd>
                   <dt className="text-gray-500">{t('summaryAssetInsuranceCapitalizedLabel')}</dt>
                   <dd className="font-medium text-gray-900">{formatRp(0)}</dd>
                   <dt className="text-gray-500">{t('summaryNtfAmountLabel')}</dt>
-                  <dd className="font-semibold text-[#002c5f]">{formatRp(summary.ntfAmt)}</dd>
+                  <dd className="font-semibold text-[#002c5f]">{formatRp(displaySummary.ntfAmt)}</dd>
                 </dl>
               </section>
             </>

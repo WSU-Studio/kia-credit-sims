@@ -134,7 +134,7 @@ export interface FinalSummaryInfo {
   ntfAmt: number;
   /** DP amount — turunan AssetPriceAmt - NtfAmt jika field amount tidak ada di response. */
   downPaymentAmt: number;
-  /** Asset Insurance Paid — SummaryInfoObj.AssetInsPaidAmt */
+  /** Asset Insurance Paid — SummaryInfoObj.AssetInsPaidAmt (remainder of TDP if missing). */
   assetInsPaidAmt: number;
   /** Fee Paid by Customer — SummaryInfoObj.FeePaidAmt (admin + provisi + fiducia). */
   feePaidAmt: number;

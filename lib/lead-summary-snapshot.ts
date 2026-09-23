@@ -1,5 +1,6 @@
 import type { FinalSummaryInfo, ProductCalculation } from '@/app/types/credit-simulation';
 import { mapSummaryInfoToFinalSummary } from '@/lib/hyundai-lead-financial';
+import { hydrateLeadSummaryAmounts } from '@/lib/lead-summary-amounts';
 import { ntfFromAsset, provisionAmountOf, provisionPercentOf } from '@/lib/salesman-fee';
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -31,7 +32,7 @@ export function parseLeadSummarySnapshot(raw: unknown): FinalSummaryInfo | null 
       ? obj.firstInstallment
       : undefined;
 
-  return {
+  return hydrateLeadSummaryAmounts({
     productName,
     productCode: obj.productCode != null ? String(obj.productCode) : null,
     assetDownPaymentPrcnt: num(obj.assetDownPaymentPrcnt),
@@ -51,7 +52,7 @@ export function parseLeadSummarySnapshot(raw: unknown): FinalSummaryInfo | null 
     adminFeeAmt: obj.adminFeeAmt != null ? num(obj.adminFeeAmt) : undefined,
     fiduciaFeeAmt: obj.fiduciaFeeAmt != null ? num(obj.fiduciaFeeAmt) : undefined,
     firstInstallment: first,
-  };
+  });
 }
 
 /**
@@ -89,12 +90,8 @@ export function buildSummaryFromProductRow(params: {
   const feePaidAmt = adminFeeAmt + provisionAmt + fiduciaFeeAmt;
   const totalDownPaymentAmt = Number(params.row.TdpAmt) || downPaymentAmt;
   const balloonAmt = Number(params.row.BalloonAmt) || 0;
-  const totalPaymentAmt =
-    params.firstInstallment === 'ADDM'
-      ? totalDownPaymentAmt + instAmt * Math.max(params.tenor - 1, 0)
-      : totalDownPaymentAmt + instAmt * params.tenor;
 
-  return {
+  return hydrateLeadSummaryAmounts({
     productName: stripProductNameHint(params.productName) || params.productName,
     productCode: params.productCode,
     assetDownPaymentPrcnt: params.dpPercent,
@@ -102,7 +99,7 @@ export function buildSummaryFromProductRow(params: {
     flatRatePrcnt: Number(params.row.FlatRatePrcnt) || 0,
     instAmt,
     totalDownPaymentAmt,
-    totalPaymentAmt,
+    totalPaymentAmt: 0,
     assetPriceAmt,
     ntfAmt,
     downPaymentAmt,
@@ -114,7 +111,7 @@ export function buildSummaryFromProductRow(params: {
     adminFeeAmt,
     fiduciaFeeAmt,
     firstInstallment: params.firstInstallment,
-  };
+  });
 }
 
 /** Fallback when no snapshot / API log — only fields stored on Lead. */
@@ -142,7 +139,7 @@ export function buildSummaryFromLeadFields(params: {
   const firstInstallment: 'ADDM' | 'ADDB' =
     params.firstInstallment === 'ADDB' ? 'ADDB' : 'ADDM';
 
-  return {
+  return hydrateLeadSummaryAmounts({
     productName,
     productCode: params.productCode?.trim() || null,
     assetDownPaymentPrcnt: dpPercent,
@@ -158,7 +155,7 @@ export function buildSummaryFromLeadFields(params: {
     feePaidAmt: 0,
     balloonAmt: 0,
     firstInstallment,
-  };
+  });
 }
 
 /** Extract SummaryInfoObj from HyundaiApiCallLog request/response bodies. */
@@ -184,7 +181,16 @@ export function extractSummaryFromApiLogBody(
 
   if (!summaryObj) return null;
 
-  return mapSummaryInfoToFinalSummary(summaryObj, fallbacks);
+  const finObj =
+    asRecord(root.SaveLeadFinDataObj) ||
+    asRecord(root.saveLeadFinDataObj) ||
+    asRecord(asRecord(root.responseBody)?.SaveLeadFinDataObj) ||
+    asRecord(asRecord(root.requestBody)?.SaveLeadFinDataObj);
+
+  return mapSummaryInfoToFinalSummary(
+    finObj ? { ...finObj, ...summaryObj } : summaryObj,
+    fallbacks
+  );
 }
 
 export function withProvisionBreakdown(
@@ -272,9 +278,12 @@ export function withCustomerFeeBreakdown(
 ): FinalSummaryInfo {
   const withProv = withProvisionBreakdown(attachRowFees(summary, row, overrides), provisionPrcnt);
   const fees = resolveCustomerFeeBreakdown(withProv);
-  return {
+  return hydrateLeadSummaryAmounts({
     ...withProv,
     adminFeeAmt: fees.adminFeeAmt,
     fiduciaFeeAmt: fees.fiduciaFeeAmt,
-  };
+    feePaidAmt: fees.feePaidAmt,
+    provisionFeeAmt: fees.provisionFeeAmt,
+    provisionFeePrcnt: fees.provisionFeePrcnt,
+  });
 }
