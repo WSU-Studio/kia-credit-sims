@@ -4,6 +4,7 @@ import {
   parseDealerPromotionInput,
   toPromotionDates,
 } from '@/lib/dealer-promotion';
+import { promotionHistoryAuditMetadata } from '@/lib/dealer-promotion-history';
 import { requireDealerVendorScope } from '@/lib/dealer-promotion-access';
 import { AUDIT_ACTIONS, actorFromSession, recordAudit } from '@/lib/security/audit-log';
 import { auth } from '@/lib/auth-server';
@@ -89,12 +90,10 @@ export async function POST(request: NextRequest) {
         action: AUDIT_ACTIONS.DEALER_PROMOTION_CREATE,
         resourceType: 'DealerPromotion',
         resourceId: promotion.id,
-        metadata: {
+        metadata: promotionHistoryAuditMetadata({
           vendorCode: promotion.vendorCode,
-          assetCode: promotion.assetCode,
-          discountType: promotion.discountType,
-          discountValue: promotion.discountValue,
-        },
+          after: promotion,
+        }),
         request,
       });
     }

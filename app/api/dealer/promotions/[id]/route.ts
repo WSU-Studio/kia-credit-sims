@@ -4,6 +4,7 @@ import {
   parseDealerPromotionInput,
   toPromotionDates,
 } from '@/lib/dealer-promotion';
+import { promotionHistoryAuditMetadata } from '@/lib/dealer-promotion-history';
 import {
   getPromotionForVendor,
   requireDealerVendorScope,
@@ -109,20 +110,11 @@ export async function PUT(
         action: AUDIT_ACTIONS.DEALER_PROMOTION_UPDATE,
         resourceType: 'DealerPromotion',
         resourceId: id,
-        metadata: {
-          before: {
-            assetCode: existing.assetCode,
-            discountType: existing.discountType,
-            discountValue: existing.discountValue,
-            isActive: existing.isActive,
-          },
-          after: {
-            assetCode: promotion.assetCode,
-            discountType: promotion.discountType,
-            discountValue: promotion.discountValue,
-            isActive: promotion.isActive,
-          },
-        },
+        metadata: promotionHistoryAuditMetadata({
+          vendorCode: promotion.vendorCode,
+          before: existing,
+          after: promotion,
+        }),
         request,
       });
     }
@@ -164,10 +156,10 @@ export async function DELETE(
         action: AUDIT_ACTIONS.DEALER_PROMOTION_DELETE,
         resourceType: 'DealerPromotion',
         resourceId: id,
-        metadata: {
+        metadata: promotionHistoryAuditMetadata({
           vendorCode: existing.vendorCode,
-          assetCode: existing.assetCode,
-        },
+          before: existing,
+        }),
         request,
       });
     }

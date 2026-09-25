@@ -106,16 +106,22 @@ const nextConfig = {
           },
         ],
       },
-      // Fingerprinted build assets — long-lived (URLs change on deploy).
-      {
-        source: '/_next/static/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
+      // Fingerprinted build assets — long-lived in production (URLs change on deploy).
+      // Do not set immutable on /_next/static during `next dev`: webpack reuses chunk
+      // names, so the browser would keep serving yesterday's JS (missing Task history, etc.).
+      ...(process.env.NODE_ENV === 'production'
+        ? [
+            {
+              source: '/_next/static/:path*',
+              headers: [
+                {
+                  key: 'Cache-Control',
+                  value: 'public, max-age=31536000, immutable',
+                },
+              ],
+            },
+          ]
+        : []),
     ];
   },
   // Using Webpack for better Prisma compatibility

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DealerLink } from '@/app/components/dealer/DealerLink';
 import { YearTrimFields } from '@/app/components/dealer/promotions/YearTrimFields';
+import { DealerPromotionHistoryTable } from '@/app/components/dealer/promotions/DealerPromotionHistoryTable';
 import type { AssetMaster } from '@/app/types/credit-simulation';
 import {
   DISCOUNT_IDR_STEP,
@@ -29,6 +30,8 @@ export function DealerPromotionForm({ promotionId }: DealerPromotionFormProps) {
   const [loading, setLoading] = useState(!!promotionId);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [savedMessage, setSavedMessage] = useState('');
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   const [vendorCode, setVendorCode] = useState('');
   const [assets, setAssets] = useState<AssetMaster[]>([]);
   const [assetsLoading, setAssetsLoading] = useState(false);
@@ -114,6 +117,7 @@ export function DealerPromotionForm({ promotionId }: DealerPromotionFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSavedMessage('');
     setSaving(true);
 
     try {
@@ -149,8 +153,19 @@ export function DealerPromotionForm({ promotionId }: DealerPromotionFormProps) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Gagal menyimpan promo');
 
-      router.push('/dealer/promotions');
+      if (!promotionId) {
+        const newId = data.promotion?.id;
+        if (typeof newId === 'string' && newId) {
+          router.push(`/dealer/promotions/${newId}/edit`);
+          router.refresh();
+          return;
+        }
+      }
+
+      setSavedMessage('Perubahan tersimpan. Riwayat diperbarui.');
+      setHistoryRefreshKey((key) => key + 1);
       router.refresh();
+      setSaving(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
       setSaving(false);
@@ -163,12 +178,18 @@ export function DealerPromotionForm({ promotionId }: DealerPromotionFormProps) {
 
   return (
     <form
+      id="dealer-promotion-form"
       onSubmit={handleSubmit}
       className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 text-gray-900 space-y-6"
     >
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
           {error}
+        </div>
+      )}
+      {savedMessage && (
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-lg text-sm">
+          {savedMessage}
         </div>
       )}
 
@@ -391,6 +412,13 @@ export function DealerPromotionForm({ promotionId }: DealerPromotionFormProps) {
           {saving ? 'Menyimpan...' : promotionId ? 'Simpan Perubahan' : 'Buat Promo'}
         </button>
       </div>
+
+      <hr className="border-gray-200" />
+
+      <DealerPromotionHistoryTable
+        promotionId={promotionId}
+        refreshKey={historyRefreshKey}
+      />
     </form>
   );
 }
