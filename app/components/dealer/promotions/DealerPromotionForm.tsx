@@ -6,6 +6,7 @@ import { DealerLink } from '@/app/components/dealer/DealerLink';
 import { YearTrimFields } from '@/app/components/dealer/promotions/YearTrimFields';
 import type { AssetMaster } from '@/app/types/credit-simulation';
 import {
+  DISCOUNT_IDR_STEP,
   DISCOUNT_TYPES,
   MAX_DISCOUNT_PERCENT,
   formatIdr,
@@ -271,15 +272,19 @@ export function DealerPromotionForm({ promotionId }: DealerPromotionFormProps) {
             required
             min={0}
             max={discountType === DISCOUNT_TYPES.PERCENT ? MAX_DISCOUNT_PERCENT * 100 : undefined}
-            step={discountType === DISCOUNT_TYPES.PERCENT ? 0.1 : 1000000}
+            step={discountType === DISCOUNT_TYPES.PERCENT ? 0.1 : DISCOUNT_IDR_STEP}
             value={discountValue}
             onChange={(e) => setDiscountValue(e.target.value)}
-            placeholder={discountType === DISCOUNT_TYPES.PERCENT ? 'mis. 5' : 'mis. 5000000'}
+            placeholder={discountType === DISCOUNT_TYPES.PERCENT ? 'mis. 5' : 'mis. 2550000'}
             className="w-full px-3 h-11 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-950"
           />
-          {discountType === DISCOUNT_TYPES.PERCENT && (
+          {discountType === DISCOUNT_TYPES.PERCENT ? (
             <p className="mt-1 text-xs text-gray-500">
               Maks. {MAX_DISCOUNT_PERCENT * 100}% dari harga OTR
+            </p>
+          ) : (
+            <p className="mt-1 text-xs text-gray-500">
+              Nominal rupiah bebas, tidak harus kelipatan 1 juta.
             </p>
           )}
         </div>
@@ -294,7 +299,7 @@ export function DealerPromotionForm({ promotionId }: DealerPromotionFormProps) {
               id="maxDiscount"
               type="number"
               min={0}
-              step={1000000}
+              step={DISCOUNT_IDR_STEP}
               value={maxDiscount}
               onChange={(e) => setMaxDiscount(e.target.value)}
               placeholder="Batas atas nominal diskon"

@@ -8,6 +8,9 @@ export type DiscountType = (typeof DISCOUNT_TYPES)[keyof typeof DISCOUNT_TYPES];
 /** Aligns with PriceStep max discount cap */
 export const MAX_DISCOUNT_PERCENT = 0.25;
 
+/** Nominal promo IDR — any whole rupiah (not 1jt steps). */
+export const DISCOUNT_IDR_STEP = 1;
+
 export type DealerPromotionRecord = {
   id: string;
   vendorCode: string;
