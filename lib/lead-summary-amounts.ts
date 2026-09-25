@@ -84,3 +84,22 @@ export function hydrateLeadSummaryAmounts(summary: FinalSummaryInfo): FinalSumma
     totalPaymentAmt: resolveTotalPaymentAmt(summary),
   };
 }
+
+/**
+ * Confins TDP already includes insurance, but AssetInsPaidAmt is often 0 on
+ * SimulateFinancialCalculate / SaveLeadFinDataObj (MLoan then shows Rp 0).
+ * Fill the split field only — do not change TdpAmt.
+ */
+export function withAssetInsPaidAmtIfMissing(
+  obj: Record<string, unknown> | null | undefined,
+  resolved: number
+): Record<string, unknown> {
+  const next = { ...(obj ?? {}) };
+  const existing = Math.max(
+    0,
+    n(next.AssetInsPaidAmt ?? next.assetInsPaidAmt ?? next.TotalInsCustAmt ?? next.totalInsCustAmt)
+  );
+  const amt = Math.max(0, n(resolved));
+  if (existing > 0 || !(amt > 0)) return next;
+  return { ...next, AssetInsPaidAmt: amt };
+}

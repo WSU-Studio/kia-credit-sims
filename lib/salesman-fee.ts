@@ -140,9 +140,60 @@ export function alignAdminFeeAmt(value: number, rule: AdminFeeRule): number {
   return snapToStep(n, ADMIN_FEE_STEP_AMT, rule.min, rule.max);
 }
 
+export type TenorAdminFeeSnap = {
+  amt: number;
+  bhv: string;
+  cptlz: boolean;
+};
+
+export function snapshotTenorAdminFees(
+  rows: Array<{ Tenor?: unknown } & AdminFeeRow>
+): Record<number, TenorAdminFeeSnap> {
+  const out: Record<number, TenorAdminFeeSnap> = {};
+  for (const row of rows) {
+    const tenor = Number(row.Tenor);
+    if (!Number.isFinite(tenor)) continue;
+    out[tenor] = {
+      amt: readAdminFeeAmt(row),
+      bhv: readAdminFeeBhv(row),
+      cptlz: readAdminFeeCptlz(row),
+    };
+  }
+  return out;
+}
+
+/**
+ * CalculateProductFromRule is multi-tenor. A provision-only override can still
+ * make Confins echo Default-card AdminFeeAmt (3jt) onto tenor 36 (5jt).
+ * Put each tenor's last clean Confins amount back and patch TDP by the delta.
+ */
+export function restoreTenorAdminFees<T extends ProductCalculation>(
+  rows: T[],
+  snapshot: Record<number, TenorAdminFeeSnap> | null | undefined
+): T[] {
+  if (!snapshot || Object.keys(snapshot).length === 0) return rows;
+  return rows.map((row) => {
+    const snap = snapshot[Number(row.Tenor)];
+    if (!snap) return row;
+    const current = readAdminFeeAmt(row);
+    const delta = snap.amt - current;
+    if (delta === 0 && readAdminFeeBhv(row) === snap.bhv) return row;
+    return {
+      ...row,
+      AdminFeeAmt: snap.amt,
+      ...(snap.bhv ? { AdminFeeBhv: snap.bhv } : {}),
+      AdminFeeCptlz: snap.cptlz,
+      TdpAmt: (Number(row.TdpAmt) || 0) + delta,
+    };
+  });
+}
+
 export function buildDealerFeeOverrideBody(input: {
   enabled: boolean;
-  feeTouched: boolean;
+  /** @deprecated Prefer adminFeeTouched / provisionTouched. Treated as both. */
+  feeTouched?: boolean;
+  adminFeeTouched?: boolean;
+  provisionTouched?: boolean;
   rule: AdminFeeRule;
   adminFeeAmt: number;
   adminFeeBhv?: string | null;
@@ -155,15 +206,21 @@ export function buildDealerFeeOverrideBody(input: {
    */
   includeLocked?: boolean;
 }): Record<string, unknown> {
+  const adminFeeTouched = input.adminFeeTouched ?? input.feeTouched ?? false;
+  const provisionTouched = input.provisionTouched ?? input.feeTouched ?? false;
   const sendLocked = Boolean(input.includeLocked && input.rule.locked);
-  if (!input.enabled || (!input.feeTouched && !sendLocked)) return {};
+  // FinalCalculate is single-tenor: pin this row's AdminFeeAmt when provision was edited
+  // so Confins does not fall back to Default-card 3jt (Amy GIIAS Low Interest tenor 36).
+  const sendAdmin =
+    adminFeeTouched || sendLocked || Boolean(input.includeLocked && provisionTouched);
+  if (!input.enabled || (!sendAdmin && !provisionTouched)) return {};
   const admin = {
     adminFeeAmt: input.rule.locked ? input.rule.amount : input.adminFeeAmt,
     ...(input.adminFeeBhv ? { adminFeeBhv: input.adminFeeBhv } : {}),
     ...(input.adminFeeCptlz != null ? { adminFeeCptlz: input.adminFeeCptlz } : {}),
   };
-  // Amount-lock from Confins may send without touching the stepper — don't zero provision.
-  if (!input.feeTouched && sendLocked) return admin;
+  if (sendAdmin && !provisionTouched) return admin;
+  if (!sendAdmin && provisionTouched) return { provisionFee: input.provisionPrcnt };
   return { ...admin, provisionFee: input.provisionPrcnt };
 }
 

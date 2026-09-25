@@ -4,9 +4,15 @@ import { integrationRequestBody } from '@/lib/hyundai-integration-request';
 import { resolveHyundaiProductFromSimulation } from '@/lib/hyundai-product-map';
 import { resolveIsPartner } from '@/lib/hyundai-partner';
 import type { FinalSummaryInfo } from '@/app/types/credit-simulation';
-import { hydrateLeadSummaryAmounts } from '@/lib/lead-summary-amounts';
+import {
+  hydrateLeadSummaryAmounts,
+  resolveAssetInsPaidAmt,
+  withAssetInsPaidAmtIfMissing,
+} from '@/lib/lead-summary-amounts';
 import {
   buildHyundaiFeeRequestFields,
+  ntfFromAsset,
+  provisionAmountOf,
   type SalesmanFeeOverride,
 } from '@/lib/salesman-fee';
 
@@ -152,6 +158,53 @@ export function mapSummaryInfoToFinalSummary(
     adminFeeAmt: numField(summary, 'AdminFeeAmt', 'adminFeeAmt') || undefined,
     fiduciaFeeAmt: numField(summary, 'FiduciaFeeAmt', 'fiduciaFeeAmt', 'FiduciaAmt') || undefined,
     firstInstallment: fallbacks.firstInstallment,
+  });
+}
+
+function feePaidFromSimulateRow(
+  row: Record<string, unknown>,
+  otrPrice: number,
+  dpPercent: number
+): number {
+  const explicit = numField(row, 'FeePaidAmt', 'FeePaidByCustomerAmt');
+  if (explicit > 0) return explicit;
+  const ntf = ntfFromAsset(otrPrice, dpPercent);
+  return (
+    numField(row, 'AdminFeeAmt', 'adminFeeAmt') +
+    provisionAmountOf(
+      {
+        ProvisionFee: numField(row, 'ProvisionFee', 'provisionFee'),
+        ProvisionType: strField(row, 'ProvisionType', 'provisionType') || 'PRCNT',
+      },
+      ntf
+    ) +
+    numField(row, 'FiduciaFeeAmt', 'fiduciaFeeAmt', 'FiduciaAmt')
+  );
+}
+
+/** TDP remainder when SimulateFinancialCalculate omits AssetInsPaidAmt. Do not change TdpAmt. */
+function resolvedAssetInsPaidFromSimulateRow(
+  row: Record<string, unknown>,
+  extras: {
+    dpAmt: number;
+    firstInstallment: 'ADDM' | 'ADDB';
+    otrPrice: number;
+    dpPercent: number;
+  }
+): number {
+  return resolveAssetInsPaidAmt({
+    assetInsPaidAmt: numField(
+      row,
+      'AssetInsPaidAmt',
+      'assetInsPaidAmt',
+      'TotalInsCustAmt',
+      'totalInsCustAmt'
+    ),
+    totalDownPaymentAmt: numField(row, 'TdpAmt', 'TotalDownPaymentAmt', 'totalDownPaymentAmt'),
+    downPaymentAmt: extras.dpAmt,
+    instAmt: numField(row, 'InstallmentAmt', 'InstAmt', 'instAmt'),
+    feePaidAmt: feePaidFromSimulateRow(row, extras.otrPrice, extras.dpPercent),
+    firstInstallment: extras.firstInstallment,
   });
 }
 
@@ -564,8 +617,16 @@ export async function bootstrapLeadFinancialAndInsurance(params: {
     );
   }
 
+  const assetInsPaidAmt = resolvedAssetInsPaidFromSimulateRow(simulateRow, {
+    dpAmt,
+    firstInstallment,
+    otrPrice: params.otrPrice,
+    dpPercent: params.dpPercent,
+  });
+
   // Step 3 — commit pilihan ke Hyundai. Body = wrapper camelCase + spread row
   // dari simulate (PascalCase). Hyundai menerima campuran ini per Postman v1.1.
+  // AssetInsPaidAmt is a TDP split only (Amy #19). Do not change TdpAmt.
   await hyundaiPost(
     '/v1/IntegrationWebsite/SaveFinancialData',
     integrationRequestBody({
@@ -575,6 +636,7 @@ export async function bootstrapLeadFinancialAndInsurance(params: {
       isPromotion,
       ...simulateRow,
       ...feeFields,
+      ...(assetInsPaidAmt > 0 ? { AssetInsPaidAmt: assetInsPaidAmt } : {}),
     })
   );
 
@@ -600,14 +662,17 @@ export async function bootstrapLeadFinancialAndInsurance(params: {
   //   "An exception was thrown while attempting to evaluate a LINQ query
   //    parameter expression"
   // Maka kita forward `finalRes` apa adanya + inject LeadNo.
+  const summaryInfo = withAssetInsPaidAmtIfMissing(finalRes.SummaryInfoObj, assetInsPaidAmt);
+  const saveFin = withAssetInsPaidAmtIfMissing(finalRes.SaveLeadFinDataObj, assetInsPaidAmt);
+
   await hyundaiPostLogged(
     '/v1/IntegrationWebsite/SaveFinalCalculateResult',
     integrationRequestBody({
       LeadNo: params.leadNo,
       ...(finalRes as Record<string, unknown>),
-      SummaryInfoObj: finalRes.SummaryInfoObj,
+      SummaryInfoObj: summaryInfo,
       SaveLeadDataObj: finalRes.SaveLeadDataObj ?? { NumOfInst: params.tenor },
-      SaveLeadFinDataObj: finalRes.SaveLeadFinDataObj ?? {},
+      SaveLeadFinDataObj: saveFin,
       ListSaveLeadInstSchdlObj: finalRes.ListSaveLeadInstSchdlObj ?? [],
     }),
     { ...logMeta, endpoint: 'SaveFinalCalculateResult' }
@@ -615,8 +680,8 @@ export async function bootstrapLeadFinancialAndInsurance(params: {
 
   return mapSummaryInfoToFinalSummary(
     {
-      ...(finalRes.SaveLeadFinDataObj ?? {}),
-      ...finalRes.SummaryInfoObj,
+      ...saveFin,
+      ...summaryInfo,
     },
     {
       productName: product.ProductName,

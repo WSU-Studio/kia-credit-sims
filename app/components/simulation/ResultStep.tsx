@@ -36,7 +36,10 @@ import {
   readAdminFeeBhv,
   readAdminFeeCptlz,
   resolveAdminFeeRule,
+  restoreTenorAdminFees,
+  snapshotTenorAdminFees,
   type SalesmanFeeCaps,
+  type TenorAdminFeeSnap,
 } from '@/lib/salesman-fee';
 import Link from 'next/link';
 import { usePathname } from '@/i18n/navigation';
@@ -177,7 +180,9 @@ export function ResultStep({
   });
   const [adminFeeAmt, setAdminFeeAmt] = useState<number>(0);
   const [provisionPrcnt, setProvisionPrcnt] = useState<number>(0);
-  const feeTouchedRef = useRef(false);
+  const adminFeeTouchedRef = useRef(false);
+  const provisionTouchedRef = useRef(false);
+  const tenorAdminFeeSnapRef = useRef<Record<number, TenorAdminFeeSnap>>({});
   const fetchListGeneration = useRef(0);
   // Counter + abort controller untuk drop stale response saat user ubah
   // DP%/firstInstallment cepat (race condition: tabel bisa nampilkan data dari
@@ -226,14 +231,15 @@ export function ResultStep({
   const adminFeeRule = resolveAdminFeeRule(adminFeeSource);
   const dealerFeeOverrideBase = {
     enabled: isDealerSales,
-    feeTouched: feeTouchedRef.current,
+    adminFeeTouched: adminFeeTouchedRef.current,
+    provisionTouched: provisionTouchedRef.current,
     rule: adminFeeRule,
     adminFeeAmt,
     adminFeeBhv: readAdminFeeBhv(adminFeeSource),
     adminFeeCptlz: adminFeeSource ? readAdminFeeCptlz(adminFeeSource) : null,
     provisionPrcnt,
   };
-  /** Multi-tenor CalculateProductFromRule: only salesman edits. Locked Default-card 0 must not flatten other tenors. */
+  /** Multi-tenor CalculateProductFromRule: provision-only must not send AdminFeeAmt (flattens other tenors). */
   const dealerFeeOverride = buildDealerFeeOverrideBody(dealerFeeOverrideBase);
   /** Single-tenor FinalCalculate: also send the selected row's locked Confins amount. */
   const dealerFinalFeeOverride = buildDealerFeeOverrideBody({
@@ -302,14 +308,24 @@ export function ResultStep({
   }, [firstInstallment, selectedProduct?.ProductCode, selectedProduct?.ProductName, dpPercent, isPromotion]);
 
   useEffect(() => {
-    if (!isDealerSales || !feeTouchedRef.current) return;
+    if (!isDealerSales || !provisionTouchedRef.current) return;
     if (!selectedProduct || !otrPrice || !selectedProduct.ProductCode) return;
     const timer = setTimeout(() => {
       handleCalculate();
     }, 150);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [adminFeeAmt, provisionPrcnt]);
+  }, [provisionPrcnt]);
+
+  useEffect(() => {
+    if (!isDealerSales || !adminFeeTouchedRef.current) return;
+    if (!selectedProduct || !otrPrice || !selectedProduct.ProductCode) return;
+    const timer = setTimeout(() => {
+      handleCalculate();
+    }, 150);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adminFeeAmt]);
 
   // Bersihin in-flight request kalau komponen unmount.
   useEffect(() => {
@@ -329,8 +345,8 @@ export function ResultStep({
       highlightedRow.Tenor,
       firstInstallment,
       isPromotion ? '1' : '0',
-      isDealerSales && feeTouchedRef.current ? String(adminFeeAmt) : '-',
-      isDealerSales && feeTouchedRef.current ? String(provisionPrcnt) : '-',
+      isDealerSales ? String(adminFeeAmt) : '-',
+      isDealerSales && provisionTouchedRef.current ? String(provisionPrcnt) : '-',
     ].join('|');
   };
 
@@ -609,27 +625,39 @@ export function ResultStep({
         setFirstInstallment(resolved);
       }
 
-      setTableRows(rows);
-      setEmptyResult(rows.length === 0);
-      const row36 = rows.find((r) => r.Tenor === 36);
-      const first = rows[0];
+      const adminTouched = adminFeeTouchedRef.current;
+      const provisionTouched = provisionTouchedRef.current;
+      let nextRows = rows;
+      if (!adminTouched) {
+        nextRows = restoreTenorAdminFees(rows, tenorAdminFeeSnapRef.current);
+      }
+      if (!adminTouched && !provisionTouched) {
+        tenorAdminFeeSnapRef.current = snapshotTenorAdminFees(nextRows);
+      }
+
+      setTableRows(nextRows);
+      setEmptyResult(nextRows.length === 0);
+      const row36 = nextRows.find((r) => r.Tenor === 36);
+      const first = nextRows[0];
       const pending = pendingTenorRef.current;
       const nextTenor =
-        pending != null && rows.some((r) => r.Tenor === pending)
+        pending != null && nextRows.some((r) => r.Tenor === pending)
           ? pending
-          : rows.some((r) => r.Tenor === selectedTenor)
+          : nextRows.some((r) => r.Tenor === selectedTenor)
             ? selectedTenor
             : row36?.Tenor ?? first?.Tenor ?? 36;
-      if (pending != null && rows.some((r) => r.Tenor === pending)) {
+      if (pending != null && nextRows.some((r) => r.Tenor === pending)) {
         pendingTenorRef.current = null;
       }
       setSelectedTenor(nextTenor);
-      const seedRow = rows.find((r) => r.Tenor === nextTenor) ?? row36 ?? first;
-      if (seedRow && !feeTouchedRef.current) {
-        const ntf = ntfFromAsset(Number(otrPrice) || 0, dpPercent);
+      const seedRow = nextRows.find((r) => r.Tenor === nextTenor) ?? row36 ?? first;
+      if (seedRow && !adminTouched) {
         const source = pickAdminFeeSource(seedRow, selectedProduct);
         const rule = resolveAdminFeeRule(source);
         setAdminFeeAmt(alignAdminFeeAmt(readAdminFeeAmt(source), rule));
+      }
+      if (seedRow && !provisionTouched) {
+        const ntf = ntfFromAsset(Number(otrPrice) || 0, dpPercent);
         setProvisionPrcnt(Math.round(provisionPercentOf(seedRow, ntf) * 2) / 2);
       }
     } catch (e) {
@@ -648,7 +676,9 @@ export function ResultStep({
   };
 
   const selectProduct = (product: ProductCalculation) => {
-    feeTouchedRef.current = false;
+    adminFeeTouchedRef.current = false;
+    provisionTouchedRef.current = false;
+    tenorAdminFeeSnapRef.current = {};
     const rule = resolveAdminFeeRule(product);
     setAdminFeeAmt(alignAdminFeeAmt(readAdminFeeAmt(product), rule));
     setProvisionPrcnt(Number(product.ProvisionFee) || 0);
@@ -666,8 +696,14 @@ export function ResultStep({
   const selectTenorRow = (row: ProductCalculation) => {
     setSelectedTenor(row.Tenor);
     if (!isDealerSales) return;
-    feeTouchedRef.current = false;
-    const source = pickAdminFeeSource(row, selectedProduct);
+    adminFeeTouchedRef.current = false;
+    const restored = restoreTenorAdminFees(tableRows, tenorAdminFeeSnapRef.current);
+    if (restored !== tableRows) setTableRows(restored);
+    const sourceRow = restored.find((r) => r.Tenor === row.Tenor) ?? row;
+    const snap = tenorAdminFeeSnapRef.current[Number(row.Tenor)];
+    const source = snap
+      ? { AdminFeeAmt: snap.amt, AdminFeeBhv: snap.bhv, AdminFeeCptlz: snap.cptlz }
+      : pickAdminFeeSource(sourceRow, selectedProduct);
     const rule = resolveAdminFeeRule(source);
     setAdminFeeAmt(alignAdminFeeAmt(readAdminFeeAmt(source), rule));
   };
@@ -901,11 +937,11 @@ export function ResultStep({
               disabled={simulateLoading}
               onAdminFeeChange={(next) => {
                 if (adminFeeRule.locked) return;
-                feeTouchedRef.current = true;
+                adminFeeTouchedRef.current = true;
                 setAdminFeeAmt(next);
               }}
               onProvisionPrcntChange={(next) => {
-                feeTouchedRef.current = true;
+                provisionTouchedRef.current = true;
                 setProvisionPrcnt(next);
               }}
               formatCurrency={formatCurrency}

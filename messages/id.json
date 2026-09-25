@@ -172,7 +172,7 @@
     "adminFeeMinHint": "Minimum sesuai rule: {min}.",
     "adminFeeMaxHint": "Maksimum sesuai rule: {max}.",
     "provisionFeeLabel": "Provision",
-    "provisionFeeHint": "Kelipatan 0,5%, menimpa nilai provision dari API.",
+    "provisionFeeHint": "Kelipatan 0,5%.",
     "provisionAmountLabel": "Nominal provision",
     "standard": "Standard",
     "promotion": "Promotion",
