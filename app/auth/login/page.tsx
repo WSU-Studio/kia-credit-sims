@@ -69,7 +69,7 @@ function LoginForm() {
             {login.step === 'otp' ? 'Verifikasi OTP' : 'Sign in to CMS'}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            KIA Capital
+            Hyundai Capital Finance Indonesia
           </p>
         </div>
 

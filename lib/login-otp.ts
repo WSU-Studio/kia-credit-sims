@@ -40,7 +40,7 @@ function buildOtpEmail(name: string, code: string): { subject: string; text: str
     '',
     'Jika Anda tidak mencoba login, abaikan email ini.',
     '',
-    'KIA Capital',
+    'Hyundai Capital Finance Indonesia',
   ].join('\n');
 
   const html = `<!DOCTYPE html>
