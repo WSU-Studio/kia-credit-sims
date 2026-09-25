@@ -246,6 +246,8 @@ export function ResultStep({
     ...dealerFeeOverrideBase,
     includeLocked: true,
   });
+  /** Public summary must use the tenor row. Dealer may pass the stepper amount. */
+  const salesmanAdminOverride = isDealerSales ? { adminFeeAmt } : undefined;
 
   // Tab promotion hanya relevan saat API mengirim produk promo.
   // Kalau promo kosong, balik ke tab Standard.
@@ -405,7 +407,7 @@ export function ResultStep({
           },
           provisionPrcnt,
           highlightedRow,
-          { adminFeeAmt }
+          salesmanAdminOverride
         )
       );
       setFinalSummaryAt(new Date().toISOString());
@@ -473,7 +475,7 @@ export function ResultStep({
           },
           provisionPrcnt,
           highlightedRow,
-          { adminFeeAmt }
+          salesmanAdminOverride
         ),
       });
     } catch (err) {
@@ -695,8 +697,7 @@ export function ResultStep({
 
   const selectTenorRow = (row: ProductCalculation) => {
     setSelectedTenor(row.Tenor);
-    if (!isDealerSales) return;
-    adminFeeTouchedRef.current = false;
+    if (isDealerSales) adminFeeTouchedRef.current = false;
     const restored = restoreTenorAdminFees(tableRows, tenorAdminFeeSnapRef.current);
     if (restored !== tableRows) setTableRows(restored);
     const sourceRow = restored.find((r) => r.Tenor === row.Tenor) ?? row;
@@ -1230,7 +1231,13 @@ export function ResultStep({
                 discount={discount}
                 dpPercent={dpPercent}
                 tenor={highlightedRow?.Tenor}
-                adminFeeAmtOverride={highlightedRow ? adminFeeAmt : null}
+                adminFeeAmtOverride={
+                  highlightedRow
+                    ? isDealerSales
+                      ? adminFeeAmt
+                      : readAdminFeeAmt(adminFeeSource)
+                    : null
+                }
                 adminFeeBhvOverride={
                   highlightedRow ? readAdminFeeBhv(adminFeeSource) || null : null
                 }
@@ -1262,7 +1269,7 @@ export function ResultStep({
                         }),
                         provisionPrcnt,
                         highlightedRow,
-                        { adminFeeAmt }
+                        salesmanAdminOverride
                       )
                     : null)
                 }
