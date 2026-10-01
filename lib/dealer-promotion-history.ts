@@ -1,5 +1,7 @@
 import {
   formatDiscountLabel,
+  parsePromotionDateBound,
+  toJakartaYmd,
   type DealerPromotionRecord,
 } from '@/lib/dealer-promotion';
 
@@ -94,17 +96,62 @@ function asBoolean(value: unknown): boolean | null {
   return null;
 }
 
-function asIso(value: unknown): string | null {
-  if (value instanceof Date) {
-    return Number.isNaN(value.getTime()) ? null : value.toISOString();
-  }
+const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function isDateLike(value: unknown): value is Date {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as Date).getTime === 'function' &&
+    typeof (value as Date).toISOString === 'function'
+  );
+}
+
+/** Inclusive Jakarta calendar day (YYYY-MM-DD), same as form Berlaku Dari / Berlaku Sampai. */
+function asJakartaYmd(value: unknown): string | null {
+  if (value == null || value === '') return null;
   if (typeof value === 'string') {
     const trimmed = value.trim();
     if (!trimmed) return null;
-    const parsed = new Date(trimmed);
-    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+    if (DATE_ONLY_RE.test(trimmed)) return trimmed;
   }
+
+  if (isDateLike(value)) {
+    const time = value.getTime();
+    if (typeof time === 'number' && !Number.isNaN(time)) {
+      return toJakartaYmd(value);
+    }
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : toJakartaYmd(parsed);
+  }
+
+  if (typeof value === 'string') {
+    const fromBound = parsePromotionDateBound(value, 'start');
+    if (fromBound) return toJakartaYmd(fromBound);
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : toJakartaYmd(parsed);
+  }
+
   return null;
+}
+
+function formatJakartaBound(ymd: string | null): string {
+  if (!ymd) return '—';
+  if (DATE_ONLY_RE.test(ymd)) {
+    const [year, month, day] = ymd.split('-');
+    return `${day}/${month}/${year}`;
+  }
+  const parsed = new Date(ymd);
+  if (Number.isNaN(parsed.getTime())) return '—';
+  return parsed.toLocaleDateString('id-ID', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'Asia/Jakarta',
+  });
 }
 
 export function toPromotionHistorySnapshot(
@@ -120,8 +167,8 @@ export function toPromotionHistorySnapshot(
     discountType: asString(record.discountType),
     discountValue: asNumber(record.discountValue),
     maxDiscount: asNumber(record.maxDiscount),
-    validFrom: asIso(record.validFrom),
-    validTo: asIso(record.validTo),
+    validFrom: asJakartaYmd(record.validFrom),
+    validTo: asJakartaYmd(record.validTo),
     isActive: asBoolean(record.isActive),
     notes: asString(record.notes),
   };
@@ -239,20 +286,7 @@ export function formatHistoryPeriod(
 ): string {
   if (!snapshot) return '—';
   if (!snapshot.validFrom && !snapshot.validTo) return 'Tanpa batas waktu';
-
-  const from = snapshot.validFrom
-    ? new Date(snapshot.validFrom).toLocaleDateString('id-ID', {
-        dateStyle: 'medium',
-        timeZone: 'Asia/Jakarta',
-      })
-    : '—';
-  const to = snapshot.validTo
-    ? new Date(snapshot.validTo).toLocaleDateString('id-ID', {
-        dateStyle: 'medium',
-        timeZone: 'Asia/Jakarta',
-      })
-    : '—';
-  return `${from} → ${to}`;
+  return `${formatJakartaBound(snapshot.validFrom)} – ${formatJakartaBound(snapshot.validTo)}`;
 }
 
 export function formatHistoryDiscount(

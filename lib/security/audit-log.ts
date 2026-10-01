@@ -93,13 +93,29 @@ export function contextFromRequest(request: NextRequest): AuditRequestContext {
 
 const SENSITIVE_KEY_RE = /(password|secret|token|api[-_]?key|authorization)/i;
 
+function isDateLike(value: unknown): value is Date {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as Date).getTime === 'function' &&
+    typeof (value as Date).toISOString === 'function'
+  );
+}
+
 function scrubMetadata(input: unknown): unknown {
   if (input == null || typeof input !== 'object') return input;
   if (Array.isArray(input)) return input.map(scrubMetadata);
+  if (isDateLike(input)) {
+    const time = input.getTime();
+    return typeof time === 'number' && !Number.isNaN(time) ? input.toISOString() : null;
+  }
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(input)) {
     if (SENSITIVE_KEY_RE.test(k)) {
       out[k] = '[REDACTED]';
+    } else if (isDateLike(v)) {
+      const time = v.getTime();
+      out[k] = typeof time === 'number' && !Number.isNaN(time) ? v.toISOString() : null;
     } else if (typeof v === 'object' && v !== null) {
       out[k] = scrubMetadata(v);
     } else {
