@@ -141,6 +141,7 @@ export const simulateBodySchema = withLeadNoAlias(
       adminFeeBhv: z.string().trim().max(24).optional(),
       adminFeeCptlz: z.boolean().optional(),
       provisionFee: finiteNumber({ min: 0, max: 30, label: 'ProvisionFee', required: false }).optional(),
+      provisionFeeBhv: z.string().trim().max(24).optional(),
     })
     .strip()
 );
@@ -245,6 +246,7 @@ export const finalSummaryBodySchema = withLeadNoAlias(
       adminFeeBhv: z.string().trim().max(24).optional(),
       adminFeeCptlz: z.boolean().optional(),
       provisionFee: finiteNumber({ min: 0, max: 30, label: 'ProvisionFee', required: false }).optional(),
+      provisionFeeBhv: z.string().trim().max(24).optional(),
     })
     .strip()
     .refine(

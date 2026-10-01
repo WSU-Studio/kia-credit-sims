@@ -18,6 +18,7 @@ type CustomerPaidFeesProps = {
   adminFeeMin?: number;
   adminFeeMax?: number;
   adminFeeLocked?: boolean;
+  provisionLocked?: boolean;
   disabled?: boolean;
   onAdminFeeChange: (next: number) => void;
   onProvisionPrcntChange: (next: number) => void;
@@ -40,8 +41,9 @@ export function CustomerPaidFees({
   showProvision,
   caps,
   adminFeeMin = 0,
-  adminFeeMax = 50_000_000,
+  adminFeeMax = caps.maxAdminFeeAmt,
   adminFeeLocked = false,
+  provisionLocked = false,
   disabled,
   onAdminFeeChange,
   onProvisionPrcntChange,
@@ -97,19 +99,21 @@ export function CustomerPaidFees({
             label={labels.provision}
             hint={labels.provisionHint}
             valueLabel={`${provisionPrcnt}%`}
-            disabled={disabled}
-            decrementDisabled={provisionPrcnt <= 0}
-            incrementDisabled={provisionPrcnt >= caps.maxProvisionPrcnt}
-            onDecrement={() =>
+            disabled={disabled || provisionLocked}
+            decrementDisabled={provisionLocked || provisionPrcnt <= 0}
+            incrementDisabled={provisionLocked || provisionPrcnt >= caps.maxProvisionPrcnt}
+            onDecrement={() => {
+              if (provisionLocked) return;
               onProvisionPrcntChange(
                 stepValue(provisionPrcnt, -1, PROVISION_FEE_STEP_PRCNT, 0, caps.maxProvisionPrcnt)
-              )
-            }
-            onIncrement={() =>
+              );
+            }}
+            onIncrement={() => {
+              if (provisionLocked) return;
               onProvisionPrcntChange(
                 stepValue(provisionPrcnt, 1, PROVISION_FEE_STEP_PRCNT, 0, caps.maxProvisionPrcnt)
-              )
-            }
+              );
+            }}
           />
           <p className="text-xs text-gray-500">
             {labels.provisionAmount}: {formatCurrency(provisionAmt)}

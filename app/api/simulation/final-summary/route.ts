@@ -117,6 +117,7 @@ export async function POST(request: NextRequest) {
       adminFeeBhv,
       adminFeeCptlz,
       provisionFee,
+      provisionFeeBhv,
     } = parsed.data;
     const dpPercent =
       parsed.data.dpPercent != null && Number.isFinite(parsed.data.dpPercent)
@@ -129,6 +130,7 @@ export async function POST(request: NextRequest) {
       adminFeeBhv,
       adminFeeCptlz,
       provisionFee,
+      provisionFeeBhv,
     });
     const feeOverride = parsedOverride
       ? clampSalesmanFeeOverride(parsedOverride, caps)

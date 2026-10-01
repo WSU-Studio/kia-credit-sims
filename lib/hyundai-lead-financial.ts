@@ -13,6 +13,7 @@ import {
   buildHyundaiFeeRequestFields,
   ntfFromAsset,
   provisionAmountOf,
+  stripLockedProvisionOverride,
   type SalesmanFeeOverride,
 } from '@/lib/salesman-fee';
 
@@ -546,7 +547,6 @@ export async function bootstrapLeadFinancialAndInsurance(params: {
 }): Promise<FinalSummaryInfo> {
   const logMeta = { leadId: params.leadId ?? null, hyundaiLeadNo: params.leadNo };
   const isPartner = resolveIsPartner({ isPartner: params.isPartner });
-  const feeFields = buildHyundaiFeeRequestFields(params.feeOverride);
   const productsRes = await fetchDefaultProducts(params.leadNo, params.tenor, {
     isPartner,
   });
@@ -564,6 +564,14 @@ export async function bootstrapLeadFinancialAndInsurance(params: {
     productName: params.productName,
     productCode: params.productCode,
   });
+
+  // Drop locked provision before Calculate/Simulate/Save (old leads may still store %).
+  const productBhv =
+    typeof (product as { ProvisionFeeBhv?: unknown }).ProvisionFeeBhv === 'string'
+      ? String((product as { ProvisionFeeBhv?: string }).ProvisionFeeBhv)
+      : null;
+  const feeOverride = stripLockedProvisionOverride(params.feeOverride, productBhv);
+  const feeFields = buildHyundaiFeeRequestFields(feeOverride);
 
   const dpAmt = Math.round(params.otrPrice * (params.dpPercent / 100));
   const firstInstallment: 'ADDM' | 'ADDB' = params.firstInstallment ?? 'ADDM';
@@ -624,9 +632,17 @@ export async function bootstrapLeadFinancialAndInsurance(params: {
     dpPercent: params.dpPercent,
   });
 
+  // Re-strip using simulate-row Bhv (authoritative for the chosen tenor).
+  const simulateBhv =
+    typeof simulateRow.ProvisionFeeBhv === 'string' ? simulateRow.ProvisionFeeBhv : productBhv;
+  const saveFeeFields = buildHyundaiFeeRequestFields(
+    stripLockedProvisionOverride(feeOverride, simulateBhv)
+  );
+
   // Step 3 — commit pilihan ke Hyundai. Body = wrapper camelCase + spread row
   // dari simulate (PascalCase). Hyundai menerima campuran ini per Postman v1.1.
   // AssetInsPaidAmt is a TDP split only (Amy #19). Do not change TdpAmt.
+  // Locked ProvisionFeeBhv from simulateRow must not be overwritten by fee fields.
   await hyundaiPost(
     '/v1/IntegrationWebsite/SaveFinancialData',
     integrationRequestBody({
@@ -635,7 +651,7 @@ export async function bootstrapLeadFinancialAndInsurance(params: {
       dpPrcnt: params.dpPercent,
       isPromotion,
       ...simulateRow,
-      ...feeFields,
+      ...saveFeeFields,
       ...(assetInsPaidAmt > 0 ? { AssetInsPaidAmt: assetInsPaidAmt } : {}),
     })
   );

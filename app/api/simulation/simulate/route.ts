@@ -113,6 +113,7 @@ export async function POST(request: NextRequest) {
       adminFeeBhv,
       adminFeeCptlz,
       provisionFee,
+      provisionFeeBhv,
     } = parsed.data;
     const leadNo = parsedLeadNo || undefined;
 
@@ -125,6 +126,7 @@ export async function POST(request: NextRequest) {
       adminFeeBhv,
       adminFeeCptlz,
       provisionFee,
+      provisionFeeBhv,
     });
     const feeOverride = parsedOverride
       ? clampSalesmanFeeOverride(parsedOverride, caps)
