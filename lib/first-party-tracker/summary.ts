@@ -28,6 +28,9 @@ export type AnalyticsSummary = {
   };
 };
 
+/** Must match PUBLIC_STEPS order in SimulationWizard. */
+export const FUNNEL_STEPS = ['dealer', 'model', 'spec', 'price', 'result'] as const;
+
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const JAKARTA_OFFSET = '+07:00';
 
@@ -137,9 +140,8 @@ export async function getAnalyticsSummary(range: AnalyticsDateRange): Promise<An
     prisma.$queryRaw<Array<{ step: string | null; count: bigint }>>(Prisma.sql`
       SELECT COALESCE("entityKey", payload->>'step') AS step, COUNT(DISTINCT "visitorId")::bigint AS count
       FROM analytics_events
-      WHERE name = 'sim_step' AND "createdAt" >= ${from} AND "createdAt" <= ${to}
+      WHERE name IN ('sim_start', 'sim_step') AND "createdAt" >= ${from} AND "createdAt" <= ${to}
       GROUP BY 1
-      ORDER BY count DESC
     `),
     prisma.$queryRaw<Array<{ count: bigint }>>(Prisma.sql`
       SELECT COUNT(DISTINCT "visitorId")::bigint AS count
@@ -175,9 +177,10 @@ export async function getAnalyticsSummary(range: AnalyticsDateRange): Promise<An
       })),
     funnel: {
       simStart,
-      steps: simStepRows
-        .filter((row) => row.step)
-        .map((row) => ({ step: row.step as string, uniqueVisitors: toCount(row.count) })),
+      steps: FUNNEL_STEPS.map((step) => ({
+        step,
+        uniqueVisitors: toCount(simStepRows.find((row) => row.step === step)?.count),
+      })),
       simSubmit,
     },
     conversions: {
