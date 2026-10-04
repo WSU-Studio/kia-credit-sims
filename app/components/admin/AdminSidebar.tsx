@@ -25,6 +25,7 @@ import {
 import { useAdminNavigation } from '@/app/(back-office)/AdminNavigationContext';
 import { AdminLink } from '@/app/components/admin/AdminLink';
 import { ADMIN_MENUS } from '@/lib/admin-menus';
+import { KiaLogo } from '../brand/KiaLogo';
 
 const menuIcons: Record<string, ComponentType<{ size?: number }>> = {
   DASHBOARD: IconLayoutDashboard,
@@ -71,11 +72,12 @@ export function AdminSidebar({ visibleMenuCodes }: AdminSidebarProps) {
   }, [pathname, setNavigating]);
 
   return (
-    <aside className="w-64 bg-gray-900 text-white min-h-screen">
+    <aside className="w-64 bg-slate-950 text-white min-h-screen">
       <div className="fixed flex flex-col h-full">
         <div className="p-6 border-b border-gray-800">
-          <h1 className="text-xl font-bold">KIA CMS</h1>
-          <p className="text-sm text-gray-400 mt-1">Content Management</p>
+          <KiaLogo className="w-28" />
+          {/* <h1 className="text-xl font-bold">KIA CMS</h1> */}
+          <p className="text-sm text-gray-300 font-medium tracking-wide mt-1">Back Office / CMS</p>
         </div>
 
         <nav className="p-4 space-y-1 overflow-y-auto max-h-[calc(100vh-176px)]">
