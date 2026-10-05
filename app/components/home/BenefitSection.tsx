@@ -31,10 +31,7 @@ export function BenefitSection({
   const t = useTranslations("home");
   const locale = useLocale();
   const isEn = locale === "en";
-  const displayBenefits = benefits && benefits.length > 0 ? benefits : [
-    { title: "Jaminan Keaslian", description: "Semua penawaran dari kami terjaga keasliannya." },
-    { title: "Layanan Profesional", description: "Perjalanan memilih sampai pembelian Anda ditemani tenaga kami yang profesional." },
-  ];
+  const displayBenefits = benefits ?? [];
   const line1 = (isEn ? headingLine1En : headingLine1Id)?.trim() || t("benefitHeading1");
   const line2 = (isEn ? headingLine2En : headingLine2Id)?.trim() || t("benefitHeading2");
   const line3 = (isEn ? headingLine3En : headingLine3Id)?.trim() || t("benefitHeading3");
@@ -53,15 +50,17 @@ export function BenefitSection({
               </span>
             </h2>
           </div>
-          <div className="flex-1 grid gap-4 sm:grid-cols-2 lg:grid-cols-2 w-full">
-            {displayBenefits.map((benefit, index) => (
-              <BenefitCard
-                key={`${benefit.title}-${index}`}
-                {...benefit}
-                className="hover:shadow-lg transition-shadow"
-              />
-            ))}
-          </div>
+          {displayBenefits.length > 0 && (
+            <div className="flex-1 grid gap-4 sm:grid-cols-2 lg:grid-cols-2 w-full">
+              {displayBenefits.map((benefit, index) => (
+                <BenefitCard
+                  key={`${benefit.title}-${index}`}
+                  {...benefit}
+                  className="hover:shadow-lg transition-shadow"
+                />
+              ))}
+            </div>
+          )}
         </div>
       </Container>
     </section>

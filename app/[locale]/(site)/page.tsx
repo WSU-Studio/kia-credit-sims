@@ -112,16 +112,7 @@ async function getBenefits(locale: Locale) {
     })) as Benefit[];
   } catch (error) {
     console.error('Error fetching benefits:', error);
-    return [
-      {
-        title: "Jaminan Keaslian",
-        description: "Semua penawaran dari kami terjaga keasliannya.",
-      },
-      {
-        title: "Layanan Profesional",
-        description: "Perjalanan memilih sampai pembelian Anda ditemani tenaga kami yang profesional.",
-      },
-    ];
+    return [] as Benefit[];
   }
 }
 
