@@ -6,7 +6,6 @@ import type { BenefitFormItem } from './types';
 type BenefitItemEditorProps = {
   item: BenefitFormItem;
   index: number;
-  disableRemove: boolean;
   onChange: (index: number, patch: Partial<BenefitFormItem>) => void;
   onRemove: (index: number) => void;
 };
@@ -14,7 +13,6 @@ type BenefitItemEditorProps = {
 export function BenefitItemEditor({
   item,
   index,
-  disableRemove,
   onChange,
   onRemove,
 }: BenefitItemEditorProps) {
@@ -28,8 +26,7 @@ export function BenefitItemEditor({
         <button
           type="button"
           onClick={() => onRemove(index)}
-          disabled={disableRemove}
-          className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50"
         >
           <IconTrash size={14} />
           Hapus

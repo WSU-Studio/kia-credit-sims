@@ -39,8 +39,8 @@ export function BenefitsSettings() {
     fetch('/api/admin/benefits')
       .then((res) => res.json())
       .then((result) => {
-        if (!Array.isArray(result.benefits) || result.benefits.length === 0) {
-          setItems([emptyBenefit()]);
+        if (!Array.isArray(result.benefits)) {
+          setItems([]);
           return;
         }
 
@@ -59,7 +59,7 @@ export function BenefitsSettings() {
       })
       .catch(() => {
         setMessage({ type: 'error', text: 'Gagal memuat data benefit.' });
-        setItems([emptyBenefit()]);
+        setItems([]);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -167,18 +167,26 @@ export function BenefitsSettings() {
         </p>
       </div>
 
-      <div className="space-y-4">
-        {items.map((item, index) => (
-          <BenefitItemEditor
-            key={item.id}
-            item={item}
-            index={index}
-            disableRemove={items.length <= 1}
-            onChange={updateItem}
-            onRemove={removeItem}
-          />
-        ))}
-      </div>
+      {items.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/80 px-4 py-10 text-center">
+          <p className="text-sm font-medium text-slate-700">Belum ada benefit.</p>
+          <p className="mt-1 text-xs text-slate-500">
+            Section benefit di halaman utama akan tampil tanpa card. Klik &quot;Tambah Benefit&quot; untuk menambahkan.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {items.map((item, index) => (
+            <BenefitItemEditor
+              key={item.id}
+              item={item}
+              index={index}
+              onChange={updateItem}
+              onRemove={removeItem}
+            />
+          ))}
+        </div>
+      )}
 
       <div className="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
         <button
