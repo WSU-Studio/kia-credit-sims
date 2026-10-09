@@ -1,8 +1,8 @@
 'use client';
 
 import { Suspense, useEffect } from 'react';
-import { signOut } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { signOutWithAccessLog } from '@/lib/client-sign-out';
 
 // Whitelist tujuan redirect setelah logout supaya param query tidak bisa
 // dipakai sebagai open redirect ke domain/path sembarangan.
@@ -20,7 +20,7 @@ function LogoutHandler() {
       LOGOUT_REDIRECTS[searchParams.get('redirect') ?? ''] ??
       LOGOUT_REDIRECTS.admin;
 
-    signOut({ redirect: false }).then(() => {
+    signOutWithAccessLog({ redirect: false }).then(() => {
       router.push(target);
     });
   }, [router, searchParams]);
