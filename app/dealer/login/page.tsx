@@ -1,13 +1,13 @@
 'use client';
 
 import { Suspense, useState } from 'react';
-import { signOut } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { IconEye, IconEyeOff } from '@tabler/icons-react';
 import { Providers } from '@/app/providers';
 import { OtpChallengeForm } from '@/app/components/auth/OtpChallengeForm';
 import { usePortalLogin } from '@/app/hooks/usePortalLogin';
+import { signOutWithAccessLog } from '@/lib/client-sign-out';
 import { DEALER_PORTAL_HOME } from '@/lib/dealer-portal';
 
 function DealerLoginForm() {
@@ -22,7 +22,7 @@ function DealerLoginForm() {
     const meData = await meRes.json();
 
     if (!meRes.ok || !meData.isDealerPortalUser) {
-      await signOut({ redirect: false });
+      await signOutWithAccessLog({ redirect: false });
       login.setError(
         'Akun ini tidak memiliki akses portal dealer. Hubungi admin KIA.'
       );
