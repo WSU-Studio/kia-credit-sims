@@ -6,11 +6,18 @@ import {
   getUserById,
   toNextAuthUser,
   verifyPassword,
+  type AuthUserRecord,
 } from '@/lib/auth';
 import { dealerRequiresEmailOtp } from '@/lib/auth-otp';
 import { LOGIN_ERROR_CODES } from '@/lib/auth-login-errors';
 import { consumeLoginOtpChallenge } from '@/lib/login-otp';
+import { prisma } from '@/lib/prisma';
 import { loginEmailLimiter } from '@/lib/ratelimit';
+import {
+  recordAuthLogin,
+  recordAuthLoginFailed,
+  type AccessUserSnapshot,
+} from '@/lib/security/access-log';
 import {
   readLockState,
   recordFailedLogin,
@@ -33,6 +40,17 @@ function rejectLogin(code: string): never {
   throw new PortalCredentialsSignin(code);
 }
 
+function toAccessUser(user: AuthUserRecord): AccessUserSnapshot {
+  return {
+    id: user.id,
+    email: user.email,
+    userType: user.userType,
+    vendorCode: user.vendorCode,
+    vendorName: user.vendorName,
+    vendorCity: user.vendorCity,
+  };
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   providers: [
@@ -45,7 +63,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         challengeId: { label: 'OTP challenge', type: 'text' },
         otp: { label: 'OTP', type: 'text' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         const challengeId =
           typeof credentials?.challengeId === 'string'
             ? credentials.challengeId.trim()
@@ -56,6 +74,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (challengeId && otp) {
           const consumed = await consumeLoginOtpChallenge({ challengeId, otp });
           if (consumed.ok === false) {
+            const challenge = await prisma.loginOtpChallenge.findUnique({
+              where: { id: challengeId },
+              select: { userId: true },
+            });
+            if (challenge?.userId) {
+              const failedUser = await getUserById(challenge.userId);
+              if (failedUser) {
+                await recordAuthLoginFailed({
+                  user: toAccessUser(failedUser),
+                  request,
+                  method: 'otp',
+                  reason: consumed.code,
+                });
+              }
+            }
             rejectLogin(consumed.code);
           } else {
             const user = await getUserById(consumed.userId);
@@ -65,10 +98,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
             const otpLockState = readLockState(user);
             if (otpLockState.locked) {
+              await recordAuthLoginFailed({
+                user: toAccessUser(user),
+                request,
+                method: 'otp',
+                reason: 'account_locked',
+              });
               rejectLogin(LOGIN_ERROR_CODES.CREDENTIALS);
             }
 
             await recordSuccessfulLogin(user.id);
+            await recordAuthLogin({
+              user: toAccessUser(user),
+              request,
+              method: 'otp',
+              rememberMe: consumed.rememberMe,
+            });
             return toNextAuthUser(user, consumed.rememberMe);
           }
         }
@@ -97,6 +142,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // Use generic credentials error (not ACCOUNT_LOCKED) to avoid email enumeration.
         const lockState = readLockState(user);
         if (lockState.locked) {
+          await recordAuthLoginFailed({
+            user: toAccessUser(user),
+            request,
+            method: 'password',
+            reason: 'account_locked',
+          });
           rejectLogin(LOGIN_ERROR_CODES.CREDENTIALS);
         }
 
@@ -107,6 +158,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (!isValid) {
           await recordFailedLogin(user.id);
+          await recordAuthLoginFailed({
+            user: toAccessUser(user),
+            request,
+            method: 'password',
+            reason: 'invalid_password',
+          });
           // Same generic error whether or not this attempt triggered lockout.
           return null;
         }
@@ -119,6 +176,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const rememberMe =
           credentials.rememberMe === true || credentials.rememberMe === 'true';
+
+        await recordAuthLogin({
+          user: toAccessUser(user),
+          request,
+          method: 'password',
+          rememberMe,
+        });
 
         return toNextAuthUser(user, rememberMe);
       },
