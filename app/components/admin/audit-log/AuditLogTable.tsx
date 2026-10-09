@@ -24,6 +24,9 @@ type Pagination = {
 
 const ACTION_OPTIONS = [
   '', // all
+  'auth.login',
+  'auth.logout',
+  'auth.loginFailed',
   'user.create',
   'user.update',
   'user.delete',
