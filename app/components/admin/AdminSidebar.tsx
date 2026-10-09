@@ -21,6 +21,7 @@ import {
   IconCar,
   IconScan,
   IconQrcode,
+  IconLogin,
 } from '@tabler/icons-react';
 import { useAdminNavigation } from '@/app/(back-office)/AdminNavigationContext';
 import { AdminLink } from '@/app/components/admin/AdminLink';
@@ -46,6 +47,7 @@ const menuIcons: Record<string, ComponentType<{ size?: number }>> = {
   MEDIA: IconFolder,
   SETTINGS: IconSettings,
   AUDIT_LOG: IconSettings,
+  ACCESS_LOG: IconLogin,
 };
 
 export type AdminSidebarProps = {
