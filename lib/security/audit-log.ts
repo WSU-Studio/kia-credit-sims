@@ -11,10 +11,14 @@
  */
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import type { NextRequest } from 'next/server';
 import { getClientIp } from '@/lib/ratelimit';
 
 export const AUDIT_ACTIONS = {
+  // Auth / access (Access Log)
+  AUTH_LOGIN: 'auth.login',
+  AUTH_LOGOUT: 'auth.logout',
+  AUTH_LOGIN_FAILED: 'auth.loginFailed',
+
   // Users / RBAC
   USER_CREATE: 'user.create',
   USER_UPDATE: 'user.update',
@@ -84,9 +88,10 @@ export type AuditRequestContext = {
   userAgent: string | null;
 };
 
-export function contextFromRequest(request: NextRequest): AuditRequestContext {
+export function contextFromRequest(request: Request): AuditRequestContext {
+  const ip = getClientIp(request);
   return {
-    ip: getClientIp(request) || null,
+    ip: ip && ip !== 'unknown' ? ip : null,
     userAgent: request.headers.get('user-agent'),
   };
 }
@@ -131,7 +136,7 @@ type RecordAuditOpts = {
   resourceType?: string;
   resourceId?: string;
   metadata?: Record<string, unknown>;
-  request?: NextRequest;
+  request?: Request;
   context?: AuditRequestContext;
 };
 
