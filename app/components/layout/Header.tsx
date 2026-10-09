@@ -33,7 +33,13 @@ export function Header({ items, locale }: HeaderProps) {
         <div className="hidden md:flex items-center gap-6">
           <nav className="flex gap-6 text-base lg:text-lg text-[#05141f]">
             {items.map((item, index) => (
-              <Link key={`${item.label}-${index}`} href={item.href} className="hover:opacity-70 transition-opacity">
+              <Link
+                key={`${item.label}-${index}`}
+                href={item.href}
+                target={item.target}
+                rel={item.rel}
+                className="hover:opacity-70 transition-opacity"
+              >
                 {item.label}
               </Link>
             ))}
@@ -80,6 +86,8 @@ export function Header({ items, locale }: HeaderProps) {
               <Link
                 key={`${item.label}-${index}`}
                 href={item.href}
+                target={item.target}
+                rel={item.rel}
                 className="py-2 px-4 text-sm font-medium text-[#05141f] hover:opacity-70 transition-opacity"
                 onClick={() => setOpen(false)}
               >
