@@ -42,6 +42,12 @@ function buildNavItems(
     { label: t("promo"), href: "/promo" },
     { label: t("products"), href: "/products" },
     { label: t("information"), href: informationHref },
+    {
+      label: t("kiaOfficial"),
+      href: "https://www.kia.com/id",
+      target: "_blank",
+      rel: "noopener noreferrer",
+    },
   ];
   const menuPages = pages
     .filter((p) => p.showInMenu && p.slug !== informationPage?.slug)
