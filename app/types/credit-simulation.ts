@@ -134,13 +134,30 @@ export interface FinalSummaryInfo {
   ntfAmt: number;
   /** DP amount — turunan AssetPriceAmt - NtfAmt jika field amount tidak ada di response. */
   downPaymentAmt: number;
-  /** Asset Insurance Paid — SummaryInfoObj.AssetInsPaidAmt (remainder of TDP if missing). */
+  /** Asset Insurance Paid — SummaryInfoObj.AssetInsPaidAmt (cash; remainder of TDP if missing). */
   assetInsPaidAmt: number;
-  /** Fee Paid by Customer — SummaryInfoObj.FeePaidAmt (admin + provisi + fiducia). */
+  /**
+   * Asset insurance capitalized into NTF — SummaryInfoObj.AssetInsCptlzAmt.
+   * When AssetInsIsCptlz=true this is financed; AssetInsPaidAmt is usually 0.
+   */
+  assetInsCptlzAmt?: number;
+  /**
+   * Fee Paid by Customer — SummaryInfoObj.FeePaidAmt (cash upfront).
+   * For FeePaymentType Combination this is typically admin + fiducia only;
+   * capitalized provision is FeeCptlzAmt, not FeePaidAmt.
+   */
   feePaidAmt: number;
+  /**
+   * Fee capitalized into NTF — SummaryInfoObj.FeeCptlzAmt.
+   * For Combination fee type this is usually the provision amount.
+   */
+  feeCptlzAmt?: number;
   /** Provision % yang di-set salesman (atau nilai API). */
   provisionFeePrcnt?: number;
-  /** Nominal provision = NTF × provisionFeePrcnt. */
+  /**
+   * Nominal provision. Prefer SummaryInfoObj.FeeCptlzAmt after FinalCalculate;
+   * fallback (AssetPriceAmt − DownPaymentAmt) × provisionFeePrcnt — never NtfAmt × %.
+   */
   provisionFeeAmt?: number;
   /** Admin fee dari row produk (rincian FeePaidAmt). */
   adminFeeAmt?: number;
