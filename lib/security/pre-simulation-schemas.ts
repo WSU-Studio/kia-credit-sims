@@ -21,6 +21,7 @@ export const finalSummarySchema = z.object({
   balloonAmt: z.number().optional(),
   provisionFeePrcnt: z.number().optional(),
   provisionFeeAmt: z.number().optional(),
+  provisionFeeCptlz: z.boolean().optional(),
   adminFeeAmt: z.number().optional(),
   fiduciaFeeAmt: z.number().optional(),
   firstInstallment: z.enum(['ADDM', 'ADDB']).optional(),

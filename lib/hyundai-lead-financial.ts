@@ -13,6 +13,7 @@ import {
   buildHyundaiFeeRequestFields,
   ntfFromAsset,
   provisionAmountOf,
+  provisionPercentOf,
   stripLockedProvisionOverride,
   type SalesmanFeeOverride,
 } from '@/lib/salesman-fee';
@@ -697,7 +698,7 @@ export async function bootstrapLeadFinancialAndInsurance(params: {
     { ...logMeta, endpoint: 'SaveFinalCalculateResult' }
   );
 
-  return mapSummaryInfoToFinalSummary(
+  const mapped = mapSummaryInfoToFinalSummary(
     {
       ...saveFin,
       ...summaryInfo,
@@ -711,6 +712,39 @@ export async function bootstrapLeadFinancialAndInsurance(params: {
       tenor: params.tenor,
     }
   );
+
+  // Quotation provision comes from Simulate row (Richard 14 Oct 2026), not FeeCptlzAmt.
+  // PRCNT → (AssetPrice − DP) × ProvisionFee/100; AMT → ProvisionFee.
+  const assetMinusDp = Math.max(
+    0,
+    (Number(mapped.assetPriceAmt) || 0) - (Number(mapped.downPaymentAmt) || 0)
+  );
+  const provisionRow = {
+    ProvisionFee: numField(simulateRow, 'ProvisionFee', 'provisionFee'),
+    ProvisionType:
+      strField(simulateRow, 'ProvisionType', 'provisionType') || 'PRCNT',
+  };
+  const provisionFeeCptlz = Boolean(
+    simulateRow.ProvisionFeeCptlz ?? simulateRow.provisionFeeCptlz
+  );
+  const provisionFeeAmt = provisionAmountOf(provisionRow, assetMinusDp);
+  const provisionFeePrcnt = provisionPercentOf(provisionRow, assetMinusDp);
+  const adminFromSim = numField(simulateRow, 'AdminFeeAmt', 'adminFeeAmt');
+  const fiduciaFromSim = numField(
+    simulateRow,
+    'FiduciaFeeAmt',
+    'fiduciaFeeAmt',
+    'FiduciaAmt'
+  );
+
+  return {
+    ...mapped,
+    provisionFeeAmt,
+    provisionFeePrcnt,
+    provisionFeeCptlz,
+    adminFeeAmt: mapped.adminFeeAmt || adminFromSim || undefined,
+    fiduciaFeeAmt: mapped.fiduciaFeeAmt || fiduciaFromSim || undefined,
+  };
 }
 
 /** Alias eksplisit untuk View Summary / PDF — same chain, return mapped summary. */

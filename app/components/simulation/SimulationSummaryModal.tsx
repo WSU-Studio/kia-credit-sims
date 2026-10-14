@@ -100,6 +100,7 @@ function CustomerFeeBreakdownRows({
   const fees = resolveCustomerFeeBreakdown(summary);
   const showAdmin = fees.adminFeeAmt > 0;
   const showProvision = fees.provisionFeeAmt > 0 || fees.provisionFeePrcnt > 0;
+  const showProvisionCptlzHint = showProvision && summary.provisionFeeCptlz === true;
   const showFiducia = fees.fiduciaFeeAmt > 0;
   return (
     <>
@@ -117,9 +118,11 @@ function CustomerFeeBreakdownRows({
               {formatRp(fees.provisionFeeAmt)}
               {fees.provisionFeePrcnt > 0 ? ` (${fees.provisionFeePrcnt}%)` : ''}
             </span>
-            <span className="mt-0.5 block text-xs font-normal text-gray-500">
-              {t('summaryProvisionCapitalizedHint')}
-            </span>
+            {showProvisionCptlzHint ? (
+              <span className="mt-0.5 block text-xs font-normal text-gray-500">
+                {t('summaryProvisionCapitalizedHint')}
+              </span>
+            ) : null}
           </dd>
         </>
       ) : null}
@@ -212,12 +215,12 @@ export function SimulationSummaryModal({
   const subsidyAmt = 0;
   const assetInsurancePaid = displaySummary?.assetInsPaidAmt ?? 0;
   const assetInsuranceCptlz = Math.max(0, Number(displaySummary?.assetInsCptlzAmt) || 0);
-  const feeCapitalized = Math.max(
-    0,
-    Number(displaySummary?.feeCptlzAmt) ||
-      Number(displaySummary?.provisionFeeAmt) ||
-      0
-  );
+  // NTF “Biaya Dikapitalisasi (Provisi)” = Simulate provision when Cptlz;
+  // do not use FeeCptlzAmt as provision (it is the sum of all capitalized fees).
+  const feeCapitalized =
+    displaySummary?.provisionFeeCptlz === true
+      ? Math.max(0, Number(displaySummary?.provisionFeeAmt) || 0)
+      : 0;
   const feePaidByCustomer = displaySummary?.feePaidAmt ?? 0;
   const customerFees = displaySummary ? resolveCustomerFeeBreakdown(displaySummary) : null;
   const balloonAmt = Number(displaySummary?.balloonAmt) || 0;
@@ -326,9 +329,11 @@ export function SimulationSummaryModal({
         left,
         (y += 5)
       );
-      doc.setFontSize(9);
-      doc.text(t('summaryProvisionCapitalizedHint'), left, (y += 4));
-      doc.setFontSize(11);
+      if (displaySummary.provisionFeeCptlz === true) {
+        doc.setFontSize(9);
+        doc.text(t('summaryProvisionCapitalizedHint'), left, (y += 4));
+        doc.setFontSize(11);
+      }
     }
     if (customerFees && customerFees.fiduciaFeeAmt > 0) {
       doc.text(`${t('summaryFiduciaLabel')}: ${formatRp(customerFees.fiduciaFeeAmt)}`, left, (y += 5));

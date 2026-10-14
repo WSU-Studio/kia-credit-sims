@@ -143,22 +143,26 @@ export interface FinalSummaryInfo {
   assetInsCptlzAmt?: number;
   /**
    * Fee Paid by Customer — SummaryInfoObj.FeePaidAmt (cash upfront).
-   * For FeePaymentType Combination this is typically admin + fiducia only;
-   * capitalized provision is FeeCptlzAmt, not FeePaidAmt.
+   * For FeePaymentType Combination this is typically admin + fiducia only
+   * when those fees have *FeeCptlz=false.
    */
   feePaidAmt: number;
   /**
-   * Fee capitalized into NTF — SummaryInfoObj.FeeCptlzAmt.
-   * For Combination fee type this is usually the provision amount.
+   * Total of all capitalized fees — SummaryInfoObj.FeeCptlzAmt.
+   * Not the per-fee provision amount (Richard 14 Oct 2026); quotation uses
+   * Simulate row ProvisionFee + ProvisionType instead.
    */
   feeCptlzAmt?: number;
-  /** Provision % yang di-set salesman (atau nilai API). */
+  /** Provision % (Simulate ProvisionFee when PRCNT, or salesman override). */
   provisionFeePrcnt?: number;
   /**
-   * Nominal provision. Prefer SummaryInfoObj.FeeCptlzAmt after FinalCalculate;
-   * fallback (AssetPriceAmt − DownPaymentAmt) × provisionFeePrcnt — never NtfAmt × %.
+   * Nominal provision for quotation / Cust Consent.
+   * From SimulateFinancialCalculate: PRCNT → (AssetPrice − DP) × ProvisionFee/100;
+   * AMT → ProvisionFee. Never NtfAmt × % and never FeeCptlzAmt (that is a total).
    */
   provisionFeeAmt?: number;
+  /** Simulate / FromRule ProvisionFeeCptlz — show “dikapitalisasi ke NTF” when true. */
+  provisionFeeCptlz?: boolean;
   /** Admin fee dari row produk (rincian FeePaidAmt). */
   adminFeeAmt?: number;
   /** Fiducia dari row produk / SummaryInfoObj (rincian FeePaidAmt). */
