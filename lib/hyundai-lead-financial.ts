@@ -154,7 +154,10 @@ export function mapSummaryInfoToFinalSummary(
       'InsCustAmt',
       'AssetInsCustAmt'
     ),
+    assetInsCptlzAmt:
+      numField(summary, 'AssetInsCptlzAmt', 'assetInsCptlzAmt') || undefined,
     feePaidAmt: numField(summary, 'FeePaidAmt', 'feePaidAmt', 'FeePaidByCustomerAmt'),
+    feeCptlzAmt: numField(summary, 'FeeCptlzAmt', 'feeCptlzAmt') || undefined,
     balloonAmt: numField(summary, 'BalloonAmt', 'balloonAmt'),
     adminFeeAmt: numField(summary, 'AdminFeeAmt', 'adminFeeAmt') || undefined,
     fiduciaFeeAmt: numField(summary, 'FiduciaFeeAmt', 'fiduciaFeeAmt', 'FiduciaAmt') || undefined,
