@@ -232,7 +232,7 @@ export function SimulationSummaryModal({
 
     const lh = letterhead ?? DEFAULT_LETTERHEAD;
 
-    const logoDataUrl = await loadLogoAsDataUrl('/HF-logo.svg');
+    const logoDataUrl = await loadLogoAsDataUrl('/kia-logo.svg');
     if (logoDataUrl) {
       const logoW = 57;
       const logoH = 7;
