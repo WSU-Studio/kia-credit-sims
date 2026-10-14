@@ -45,7 +45,9 @@ export function parseLeadSummarySnapshot(raw: unknown): FinalSummaryInfo | null 
     ntfAmt: num(obj.ntfAmt),
     downPaymentAmt: num(obj.downPaymentAmt),
     assetInsPaidAmt: num(obj.assetInsPaidAmt),
+    assetInsCptlzAmt: obj.assetInsCptlzAmt != null ? num(obj.assetInsCptlzAmt) : undefined,
     feePaidAmt: num(obj.feePaidAmt),
+    feeCptlzAmt: obj.feeCptlzAmt != null ? num(obj.feeCptlzAmt) : undefined,
     balloonAmt: num(obj.balloonAmt),
     provisionFeePrcnt: obj.provisionFeePrcnt != null ? num(obj.provisionFeePrcnt) : undefined,
     provisionFeeAmt: obj.provisionFeeAmt != null ? num(obj.provisionFeeAmt) : undefined,
@@ -82,12 +84,15 @@ export function buildSummaryFromProductRow(params: {
   const discount = Number(params.discount) || 0;
   const assetPriceAmt = Math.max(0, params.otrPrice - discount);
   const downPaymentAmt = Math.round(assetPriceAmt * (params.dpPercent / 100));
-  const ntfAmt = ntfFromAsset(assetPriceAmt, params.dpPercent);
+  // Pre-FinalCalculate: provision base is asset − DP (same as Confins FeeCptlzAmt),
+  // not full NtfAmt which later includes insurance + capitalized fee.
+  const provisionBase = ntfFromAsset(assetPriceAmt, params.dpPercent);
   const instAmt = Number(params.row.InstallmentAmt) || 0;
   const adminFeeAmt = Number(params.row.AdminFeeAmt) || 0;
   const fiduciaFeeAmt = Number(params.row.FiduciaFeeAmt) || 0;
-  const provisionAmt = provisionAmountOf(params.row, ntfAmt);
-  const feePaidAmt = adminFeeAmt + provisionAmt + fiduciaFeeAmt;
+  const provisionAmt = provisionAmountOf(params.row, provisionBase);
+  // Combination fee: cash = admin + fiducia; provision is capitalized.
+  const feePaidAmt = adminFeeAmt + fiduciaFeeAmt;
   const totalDownPaymentAmt = Number(params.row.TdpAmt) || downPaymentAmt;
   const balloonAmt = Number(params.row.BalloonAmt) || 0;
 
@@ -101,12 +106,13 @@ export function buildSummaryFromProductRow(params: {
     totalDownPaymentAmt,
     totalPaymentAmt: 0,
     assetPriceAmt,
-    ntfAmt,
+    ntfAmt: provisionBase,
     downPaymentAmt,
     assetInsPaidAmt: 0,
     feePaidAmt,
+    feeCptlzAmt: provisionAmt > 0 ? provisionAmt : undefined,
     balloonAmt,
-    provisionFeePrcnt: provisionPercentOf(params.row, ntfAmt),
+    provisionFeePrcnt: provisionPercentOf(params.row, provisionBase),
     provisionFeeAmt: provisionAmt,
     adminFeeAmt,
     fiduciaFeeAmt,
@@ -193,14 +199,37 @@ export function extractSummaryFromApiLogBody(
   );
 }
 
+/**
+ * Nominal provisi untuk quotation.
+ * Prefer Confins FeeCptlzAmt (FinalCalculate). Fallback: (asset − DP) × %,
+ * never NtfAmt × % — NTF already includes insurance + capitalized fee.
+ */
 export function withProvisionBreakdown(
   summary: FinalSummaryInfo,
   provisionPrcnt: number
 ): FinalSummaryInfo {
   const pct = Number.isFinite(provisionPrcnt) ? provisionPrcnt : 0;
-  const amt = Math.round((Number(summary.ntfAmt) || 0) * (pct / 100));
+  const feeCptlz = Math.max(0, Number(summary.feeCptlzAmt) || 0);
+  const assetMinusDp = Math.max(
+    0,
+    (Number(summary.assetPriceAmt) || 0) - (Number(summary.downPaymentAmt) || 0)
+  );
+
+  if (feeCptlz > 0) {
+    const derivedPct =
+      assetMinusDp > 0 ? Math.round((feeCptlz / assetMinusDp) * 10000) / 100 : pct;
+    return {
+      ...summary,
+      feeCptlzAmt: feeCptlz,
+      provisionFeePrcnt: pct > 0 ? pct : derivedPct,
+      provisionFeeAmt: feeCptlz,
+    };
+  }
+
+  const amt = Math.round(assetMinusDp * (pct / 100));
   return {
     ...summary,
+    ...(amt > 0 ? { feeCptlzAmt: amt } : {}),
     provisionFeePrcnt: pct,
     provisionFeeAmt: amt,
   };
@@ -215,9 +244,11 @@ export type CustomerFeeBreakdown = {
 };
 
 /**
- * Rincian FeePaidAmt. Fiducia di row CalculateProductFromRule sering 0/kosong
- * padahal FinalCalculate sudah memasukkan Rp 1jt ke FeePaidAmt — sisa
- * (FeePaid − admin − provisi) dipakai sebagai Fiducia.
+ * Rincian fee customer.
+ * Confins FeePaidAmt (Combination) = cash upfront, typically admin + fiducia.
+ * Provisi masuk FeeCptlzAmt / NTF — jangan dikurangi dari FeePaid saat
+ * menghitung sisa Fiducia. Fiducia di row CalculateProductFromRule sering
+ * 0/kosong; sisa (FeePaid − admin) dipakai sebagai Fiducia.
  */
 export function resolveCustomerFeeBreakdown(
   summary: Pick<
@@ -230,7 +261,7 @@ export function resolveCustomerFeeBreakdown(
   const provisionFeeAmt = Math.max(0, Number(summary.provisionFeeAmt) || 0);
   const provisionFeePrcnt = Number(summary.provisionFeePrcnt) || 0;
   const explicitFiducia = Math.max(0, Number(summary.fiduciaFeeAmt) || 0);
-  const remainder = Math.max(0, feePaidAmt - adminFeeAmt - provisionFeeAmt);
+  const remainder = Math.max(0, feePaidAmt - adminFeeAmt);
   return {
     adminFeeAmt,
     provisionFeeAmt,
