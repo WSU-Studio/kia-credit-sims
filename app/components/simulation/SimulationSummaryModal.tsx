@@ -113,8 +113,13 @@ function CustomerFeeBreakdownRows({
         <>
           <dt className="text-gray-500">{t('summaryProvisionLabel')}</dt>
           <dd className="font-medium text-gray-900">
-            {formatRp(fees.provisionFeeAmt)}
-            {fees.provisionFeePrcnt > 0 ? ` (${fees.provisionFeePrcnt}%)` : ''}
+            <span className="block">
+              {formatRp(fees.provisionFeeAmt)}
+              {fees.provisionFeePrcnt > 0 ? ` (${fees.provisionFeePrcnt}%)` : ''}
+            </span>
+            <span className="mt-0.5 block text-xs font-normal text-gray-500">
+              {t('summaryProvisionCapitalizedHint')}
+            </span>
           </dd>
         </>
       ) : null}
@@ -206,6 +211,13 @@ export function SimulationSummaryModal({
   // Subsidy belum ada nama field dari Richard — tetap placeholder 0.
   const subsidyAmt = 0;
   const assetInsurancePaid = displaySummary?.assetInsPaidAmt ?? 0;
+  const assetInsuranceCptlz = Math.max(0, Number(displaySummary?.assetInsCptlzAmt) || 0);
+  const feeCapitalized = Math.max(
+    0,
+    Number(displaySummary?.feeCptlzAmt) ||
+      Number(displaySummary?.provisionFeeAmt) ||
+      0
+  );
   const feePaidByCustomer = displaySummary?.feePaidAmt ?? 0;
   const customerFees = displaySummary ? resolveCustomerFeeBreakdown(displaySummary) : null;
   const balloonAmt = Number(displaySummary?.balloonAmt) || 0;
@@ -314,6 +326,9 @@ export function SimulationSummaryModal({
         left,
         (y += 5)
       );
+      doc.setFontSize(9);
+      doc.text(t('summaryProvisionCapitalizedHint'), left, (y += 4));
+      doc.setFontSize(11);
     }
     if (customerFees && customerFees.fiduciaFeeAmt > 0) {
       doc.text(`${t('summaryFiduciaLabel')}: ${formatRp(customerFees.fiduciaFeeAmt)}`, left, (y += 5));
@@ -337,6 +352,14 @@ export function SimulationSummaryModal({
     }
     doc.text(`${t('summaryTotalAssetPriceLabel')}: ${formatRp(displaySummary.assetPriceAmt)}`, left, (y += 5));
     doc.text(`${t('summaryDownPaymentLabel')}: (${formatRp(displaySummary.downPaymentAmt)})`, left, (y += 5));
+    doc.text(
+      `${t('summaryAssetInsuranceCapitalizedLabel')}: ${formatRp(assetInsuranceCptlz)}`,
+      left,
+      (y += 5)
+    );
+    if (feeCapitalized > 0) {
+      doc.text(`${t('summaryFeeCapitalizedLabel')}: ${formatRp(feeCapitalized)}`, left, (y += 5));
+    }
     doc.text(`${t('summaryNtfAmountLabel')}: ${formatRp(displaySummary.ntfAmt)}`, left, (y += 5));
 
     doc.save(`${t('summaryPdfFileName')}-${displaySummary.productCode ?? 'summary'}.pdf`);
@@ -528,7 +551,13 @@ export function SimulationSummaryModal({
                   <dt className="text-gray-500">{t('summaryDownPaymentLabel')}</dt>
                   <dd className="font-medium text-gray-900">({formatRp(displaySummary.downPaymentAmt)})</dd>
                   <dt className="text-gray-500">{t('summaryAssetInsuranceCapitalizedLabel')}</dt>
-                  <dd className="font-medium text-gray-900">{formatRp(0)}</dd>
+                  <dd className="font-medium text-gray-900">{formatRp(assetInsuranceCptlz)}</dd>
+                  {feeCapitalized > 0 ? (
+                    <>
+                      <dt className="text-gray-500">{t('summaryFeeCapitalizedLabel')}</dt>
+                      <dd className="font-medium text-gray-900">{formatRp(feeCapitalized)}</dd>
+                    </>
+                  ) : null}
                   <dt className="text-gray-500">{t('summaryNtfAmountLabel')}</dt>
                   <dd className="font-semibold text-[#002c5f]">{formatRp(displaySummary.ntfAmt)}</dd>
                 </dl>
